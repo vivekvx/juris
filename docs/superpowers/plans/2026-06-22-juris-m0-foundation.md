@@ -795,7 +795,7 @@ git commit -m "chore: docker-compose for local dev"
 
 ## Definition of Done (M0)
 
-- `pytest -v` green; `mypy app` and `ruff check app` clean.
+- `uv run pytest -v` green; `uv run mypy app` and `uv run ruff check app` clean.
 - `curl localhost:8000/health` → `{"status":"ok","service":"juris-backend"}`.
 - `npm run build` produces `.next/standalone`.
 - Both Docker images build; `docker compose config` valid.
