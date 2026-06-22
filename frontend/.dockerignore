@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.gitignore
+
+# Tests
+tests/
+coverage/
+
+# Env files — never bake secrets
+.env
+.env.*
+!.env.local.example
+
+# Dev artifacts
+*.md
+.eslintrc*
