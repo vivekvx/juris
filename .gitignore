@@ -16,3 +16,19 @@ out/
 firebase-credentials.json
 # OS
 .DS_Store
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+.coverage
+coverage/
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+# Logs
+npm-debug.log*
+firebase-debug.log
+# Next.js generated
+next-env.d.ts
