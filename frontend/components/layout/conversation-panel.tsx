@@ -9,7 +9,7 @@ export function ConversationPanel({ children, className }: ConversationPanelProp
   return (
     <div className={cn("flex flex-1 flex-col overflow-hidden", className)}>
       <div className="flex flex-1 justify-center overflow-y-auto">
-        <div className="w-full max-w-[720px] flex flex-col h-full">
+        <div className="w-full max-w-[720px] flex flex-col min-h-full">
           {children}
         </div>
       </div>
