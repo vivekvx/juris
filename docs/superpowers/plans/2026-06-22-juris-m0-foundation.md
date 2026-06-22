@@ -147,6 +147,13 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.3", "pytest-asyncio>=0.25", "httpx>=0.28", "mypy>=1.14", "ruff>=0.9"]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
@@ -229,11 +236,13 @@ LANGFUSE_PUBLIC_KEY=
 Run:
 ```bash
 cd /Users/vivek/Juris/backend
-python3.12 -m venv .venv && . .venv/bin/activate
-pip install -e ".[dev]"
-pytest tests/test_settings.py -v
+uv venv --python 3.12
+uv sync --extra dev
+uv run pytest tests/test_settings.py -v
 ```
 Expected: 2 passed.
+
+(All subsequent backend commands run via `uv run …` — e.g. `uv run pytest`, `uv run mypy app`, `uv run ruff check app`.)
 
 - [ ] **Step 6: Commit**
 
@@ -493,9 +502,9 @@ Expected: PASS.
 
 Run:
 ```bash
-pytest -v
-mypy app
-ruff check app
+uv run pytest -v
+uv run mypy app
+uv run ruff check app
 ```
 Expected: all tests pass, mypy clean, ruff clean.
 
@@ -517,8 +526,11 @@ git commit -m "feat(backend): FastAPI app factory with health endpoint"
 
 ```dockerfile
 FROM python:3.12-slim AS base
-ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+ENV PYTHONUNBUFFERED=1
 WORKDIR /app
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # System deps for markitdown (ffmpeg for audio)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -526,13 +538,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./
-RUN pip install --upgrade pip && pip install -e .
+RUN uv sync --no-dev --frozen
 
 COPY app ./app
 
 # Cloud Run injects PORT; default 8080
 ENV PORT=8080
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
 ```
 
 - [ ] **Step 2: Build to verify**
