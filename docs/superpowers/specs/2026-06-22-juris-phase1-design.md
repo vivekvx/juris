@@ -54,7 +54,7 @@ Frontend (Firebase Auth) → Google / email+password → Firebase ID Token
 → All handlers receive verified uid
 ```
 
-Protected routes in Next.js: middleware checks Firebase session cookie. Redirect to `/login` if unauthenticated.
+Protected routes in Next.js: a `/api/auth/session` route exchanges the Firebase ID token for an httpOnly session cookie (via `firebase-admin`). Next.js middleware reads this cookie and redirects unauthenticated requests to `/login`. Backend API calls still send `Authorization: Bearer <id_token>` and are verified independently by FastAPI.
 
 ### Frontend Structure
 
