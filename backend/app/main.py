@@ -27,8 +27,8 @@ def register_middleware(app: FastAPI, settings: Settings) -> None:
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["*"],   # Restrict to specific methods before production
+        allow_headers=["*"],   # Restrict to specific headers before production
     )
 
 
