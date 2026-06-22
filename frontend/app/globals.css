@@ -1,0 +1,166 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─── Juris Design Tokens ───────────────────────────────────────── */
+/* Dark-first. Light mode via .light class (next-themes) */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  /* Radius: 12px primary (Linear-inspired) */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+/* Dark mode (default — Juris is dark-first) */
+:root {
+  --background: oklch(0.08 0 0);
+  --foreground: oklch(0.97 0 0);
+
+  --card: oklch(0.14 0 0);
+  --card-foreground: oklch(0.97 0 0);
+
+  --popover: oklch(0.21 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+
+  --primary: oklch(0.585 0.233 264);
+  --primary-foreground: oklch(0.985 0 0);
+
+  --secondary: oklch(0.21 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
+
+  --muted: oklch(0.21 0 0);
+  --muted-foreground: oklch(0.68 0 0);
+
+  --accent: oklch(0.585 0.233 264);
+  --accent-foreground: oklch(0.985 0 0);
+
+  --destructive: oklch(0.577 0.245 27);
+
+  --border: oklch(0.31 0 0);
+  --input: oklch(0.21 0 0);
+  --ring: oklch(0.585 0.233 264);
+
+  --radius: 0.75rem;
+
+  --sidebar: oklch(0.11 0 0);
+  --sidebar-foreground: oklch(0.97 0 0);
+  --sidebar-primary: oklch(0.585 0.233 264);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.21 0 0);
+  --sidebar-accent-foreground: oklch(0.97 0 0);
+  --sidebar-border: oklch(0.21 0 0);
+  --sidebar-ring: oklch(0.585 0.233 264);
+}
+
+/* Light mode */
+.light {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.08 0 0);
+
+  --card: oklch(0.98 0 0);
+  --card-foreground: oklch(0.08 0 0);
+
+  --popover: oklch(0.96 0 0);
+  --popover-foreground: oklch(0.08 0 0);
+
+  --primary: oklch(0.55 0.233 264);
+  --primary-foreground: oklch(0.985 0 0);
+
+  --secondary: oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.14 0 0);
+
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.52 0 0);
+
+  --accent: oklch(0.55 0.233 264);
+  --accent-foreground: oklch(0.985 0 0);
+
+  --destructive: oklch(0.577 0.245 27);
+
+  --border: oklch(0.88 0 0);
+  --input: oklch(0.96 0 0);
+  --ring: oklch(0.55 0.233 264);
+
+  --sidebar: oklch(0.97 0 0);
+  --sidebar-foreground: oklch(0.14 0 0);
+  --sidebar-primary: oklch(0.55 0.233 264);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.93 0 0);
+  --sidebar-accent-foreground: oklch(0.14 0 0);
+  --sidebar-border: oklch(0.88 0 0);
+  --sidebar-ring: oklch(0.55 0.233 264);
+}
+
+/* ─── Base Styles ───────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans h-full;
+  }
+
+  body {
+    @apply bg-background text-foreground h-full antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Thin scrollbar for workspace panels */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.31 0 0);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: oklch(0.41 0 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ─── Juris Typography Utilities ────────────────────────────────── */
+@layer utilities {
+  .text-display  { font-size: 1.5rem;    line-height: 2rem;    font-weight: 600; letter-spacing: -0.025em; }
+  .text-heading  { font-size: 1.125rem;  line-height: 1.75rem; font-weight: 500; letter-spacing: -0.015em; }
+  .text-subhead  { font-size: 1rem;      line-height: 1.5rem;  font-weight: 500; letter-spacing: -0.01em;  }
+  .text-body-lg  { font-size: 0.9375rem; line-height: 1.6; }
+  .text-caption  { font-size: 0.75rem;   line-height: 1.125rem; }
+  .text-label    { font-size: 0.6875rem; line-height: 1rem; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+}
