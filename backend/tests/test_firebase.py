@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import app.core.firebase as firebase_module
+from app.config.settings import get_settings
 from app.core.firebase import (
     get_firebase_app,
     get_firestore_client,
@@ -31,19 +32,19 @@ def _reset_singleton():
 # ---------------------------------------------------------------------------
 
 def test_get_firebase_app_without_creds_raises(monkeypatch):
-    monkeypatch.setattr(firebase_module.get_settings(), "firebase_credentials", "")
+    monkeypatch.setattr(get_settings(), "firebase_credentials", "")
     with pytest.raises(RuntimeError, match="FIREBASE_CREDENTIALS"):
         get_firebase_app()
 
 
 def test_get_firestore_client_without_creds_raises(monkeypatch):
-    monkeypatch.setattr(firebase_module.get_settings(), "firebase_credentials", "")
+    monkeypatch.setattr(get_settings(), "firebase_credentials", "")
     with pytest.raises(RuntimeError, match="FIREBASE_CREDENTIALS"):
         get_firestore_client()
 
 
 def test_get_storage_bucket_without_creds_raises(monkeypatch):
-    monkeypatch.setattr(firebase_module.get_settings(), "firebase_credentials", "")
+    monkeypatch.setattr(get_settings(), "firebase_credentials", "")
     with pytest.raises(RuntimeError, match="FIREBASE_CREDENTIALS"):
         get_storage_bucket()
 
@@ -54,7 +55,7 @@ def test_get_storage_bucket_without_creds_raises(monkeypatch):
 
 def _mock_settings(monkeypatch) -> None:
     """Point settings at a fake credentials path so _ensure_app() proceeds."""
-    s = firebase_module.get_settings()
+    s = get_settings()
     monkeypatch.setattr(s, "firebase_credentials", "/fake/creds.json")
     monkeypatch.setattr(s, "firebase_project_id", "test-project")
     monkeypatch.setattr(s, "firebase_storage_bucket", "test-bucket.appspot.com")

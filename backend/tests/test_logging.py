@@ -2,6 +2,7 @@
 import json
 import logging
 from contextvars import copy_context
+from typing import Any
 
 import pytest
 
@@ -28,7 +29,7 @@ def _reset_logging():
     _request_id.reset(token)
 
 
-def _last_json(capsys) -> dict:
+def _last_json(capsys) -> dict[str, Any]:
     err = capsys.readouterr().err
     last_line = err.strip().splitlines()[-1]
     return json.loads(last_line)
@@ -81,8 +82,8 @@ def test_configure_is_idempotent(capsys):
     configure_logging()  # second call must not add duplicate handlers
     get_logger("idem").info("once")
     err = capsys.readouterr().err
-    lines = [l for l in err.strip().splitlines() if l]
-    records = [json.loads(l) for l in lines if '"message"' in l]
+    lines = [line for line in err.strip().splitlines() if line]
+    records = [json.loads(line) for line in lines if '"message"' in line]
     assert len([r for r in records if r.get("message") == "once"]) == 1
 
 
@@ -117,7 +118,7 @@ def test_configure_with_custom_formatter_then_default(capsys):
 
     get_logger("custom").info("after reset")
     err = capsys.readouterr().err
-    lines = [l.strip() for l in err.splitlines() if l.strip()]
+    lines = [line.strip() for line in err.splitlines() if line.strip()]
     # Must have exactly one line and it must be valid JSON with the message
     assert len(lines) == 1
     import json as _json

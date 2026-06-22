@@ -36,5 +36,13 @@ target-version = "py312"
 python_version = "3.12"
 strict = true
 
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+warn_return_any = false
+no_implicit_reexport = false
+
 [tool.uv]
 prerelease = "allow"
