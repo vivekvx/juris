@@ -11,6 +11,9 @@ Usage:
 
     log = get_logger(__name__)
     log.info("document parsed", extra={"doc_id": "d1", "chunk_count": 42})
+
+Note: request_id propagates automatically to asyncio tasks (copy_context semantics).
+It does NOT propagate to threads created via ThreadPoolExecutor — bind manually there.
 """
 from __future__ import annotations
 
@@ -87,15 +90,11 @@ def configure_logging(
 ) -> None:
     """Configure root logger to emit JSON to stderr.
 
-    Idempotent — safe to call multiple times; will not add duplicate handlers.
+    Replaces all existing root-logger handlers on each call. Safe to call at app startup and in tests.
     Pass a custom ``formatter`` to replace JsonFormatter (e.g. for Langfuse).
     """
     root = logging.getLogger()
-    # Remove any existing JsonFormatter handlers to avoid duplicates
-    root.handlers = [
-        h for h in root.handlers
-        if not isinstance(getattr(h, "formatter", None), JsonFormatter)
-    ]
+    root.handlers.clear()  # We own the root logger; clear all before reconfiguring.
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(formatter or JsonFormatter())
     root.addHandler(handler)

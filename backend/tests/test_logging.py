@@ -103,3 +103,23 @@ def test_request_id_is_context_local():
     # New context inherits parent's value at copy time — that is correct behaviour.
     # What we verify is that mutations in child don't affect parent.
     assert get_request_id() == "ctx-A"
+
+
+def test_configure_with_custom_formatter_then_default(capsys):
+    """Second configure_logging() call must replace a prior custom formatter, not duplicate."""
+
+    class _Silent(logging.Formatter):
+        def format(self, record: logging.LogRecord) -> str:
+            return ""
+
+    configure_logging(formatter=_Silent())
+    configure_logging()  # switch back to default JsonFormatter
+
+    get_logger("custom").info("after reset")
+    err = capsys.readouterr().err
+    lines = [l.strip() for l in err.splitlines() if l.strip()]
+    # Must have exactly one line and it must be valid JSON with the message
+    assert len(lines) == 1
+    import json as _json
+    record = _json.loads(lines[0])
+    assert record["message"] == "after reset"
