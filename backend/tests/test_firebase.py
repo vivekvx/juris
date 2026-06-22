@@ -66,7 +66,7 @@ def test_initialize_app_called_once(monkeypatch):
     mock_app = MagicMock()
 
     with (
-        patch("app.core.firebase.credentials.Certificate"),
+        patch("app.core.firebase.credentials.Certificate") as mock_cert,
         patch("app.core.firebase.firebase_admin.initialize_app", return_value=mock_app) as mock_init,
         patch("app.core.firebase.firestore.client"),
         patch("app.core.firebase.storage.bucket"),
@@ -76,6 +76,13 @@ def test_initialize_app_called_once(monkeypatch):
         get_firestore_client()
         get_storage_bucket()
         assert mock_init.call_count == 1
+        # Verify Certificate was called with the credentials path from settings
+        mock_cert.assert_called_once_with("/fake/creds.json")
+        # Verify initialize_app received correct project config
+        call_args = mock_init.call_args
+        config = call_args[0][1]  # second positional arg is the config dict
+        assert config["projectId"] == "test-project"
+        assert config["storageBucket"] == "test-bucket.appspot.com"
 
 
 def test_reset_clears_singleton(monkeypatch):
@@ -86,10 +93,11 @@ def test_reset_clears_singleton(monkeypatch):
     with (
         patch("app.core.firebase.credentials.Certificate"),
         patch("app.core.firebase.firebase_admin.initialize_app", return_value=mock_app) as mock_init,
-        patch("app.core.firebase.firebase_admin.delete_app"),
+        patch("app.core.firebase.firebase_admin.delete_app") as mock_delete,
     ):
         get_firebase_app()
         reset_firebase_app()
+        mock_delete.assert_called_once_with(mock_app)
         get_firebase_app()
         assert mock_init.call_count == 2
 

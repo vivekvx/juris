@@ -90,4 +90,4 @@ def get_storage_bucket() -> Bucket:
 
     Raises RuntimeError if FIREBASE_CREDENTIALS is not configured.
     """
-    return storage.bucket(app=_ensure_app())
+    return cast(Bucket, storage.bucket(app=_ensure_app()))
