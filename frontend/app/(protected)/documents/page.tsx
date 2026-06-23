@@ -1,5 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
-import { UploadZone } from "@/components/documents/upload-zone";
+import { DocumentsView } from "@/components/documents/documents-view";
 
 export default function DocumentsPage() {
   return (
@@ -9,7 +9,7 @@ export default function DocumentsPage() {
           <h1 className="text-heading mb-1">Documents</h1>
           <p className="text-[0.875rem] text-muted-foreground">Upload legal documents for analysis.</p>
         </div>
-        <UploadZone />
+        <DocumentsView />
       </div>
     </AppShell>
   );

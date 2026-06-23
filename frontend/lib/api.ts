@@ -2,6 +2,22 @@ import type { DocumentResponse } from "@/types/document";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8001";
 
+export async function listDocuments(idToken: string): Promise<DocumentResponse[]> {
+  const res = await fetch(`${BACKEND_URL}/api/documents/`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  if (!res.ok) throw new Error("Failed to load documents.");
+  return res.json() as Promise<DocumentResponse[]>;
+}
+
+export async function deleteDocument(id: string, idToken: string): Promise<void> {
+  const res = await fetch(`${BACKEND_URL}/api/documents/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  if (!res.ok) throw new Error("Failed to delete document.");
+}
+
 export async function backendPost(
   path: string,
   idToken: string,

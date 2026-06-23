@@ -31,7 +31,7 @@ function validate(file: File): string | null {
   return null;
 }
 
-export function UploadZone() {
+export function UploadZone({ onSuccess }: { onSuccess?: () => void } = {}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<UploadState>({ status: "idle" });
 
@@ -53,6 +53,7 @@ export function UploadZone() {
       const idToken = await currentUser.getIdToken();
       const doc = await uploadDocument(file, idToken);
       setState({ status: "success", document: doc });
+      onSuccess?.();
     } catch (err) {
       const message =
         err instanceof Error && err.message !== "Failed to fetch"
