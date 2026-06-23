@@ -74,7 +74,7 @@ def test_document_dump_contains_all_fields() -> None:
     assert keys == {
         "id", "owner_uid", "filename", "original_filename",
         "mime_type", "size_bytes", "status", "storage_path",
-        "created_at", "updated_at",
+        "error_message", "created_at", "updated_at",
     }
 
 

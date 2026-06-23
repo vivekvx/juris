@@ -78,6 +78,7 @@ def update_document_status(
     document_id: str,
     new_status: DocumentStatus,
     owner_uid: str,
+    error_message: str | None = None,
 ) -> Document:
     ref = get_firestore_client().collection(_COLLECTION).document(document_id)
     snap = cast(DocumentSnapshot, ref.get())
@@ -93,8 +94,12 @@ def update_document_status(
         )
     now = _utc_now()
     updates: dict[str, Any] = {"status": new_status.value, "updated_at": now}
+    copy_fields: dict[str, Any] = {"status": new_status, "updated_at": now}
+    if error_message is not None:
+        updates["error_message"] = error_message
+        copy_fields["error_message"] = error_message
     ref.update(updates)
-    return doc.model_copy(update={"status": new_status, "updated_at": now})
+    return doc.model_copy(update=copy_fields)
 
 
 def delete_document(document_id: str, owner_uid: str) -> None:

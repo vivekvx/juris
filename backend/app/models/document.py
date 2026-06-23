@@ -24,6 +24,7 @@ class Document(BaseModel):
     size_bytes:        int
     status:            DocumentStatus
     storage_path:      str
+    error_message:     str | None = None
     created_at:        datetime
     updated_at:        datetime
 
