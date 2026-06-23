@@ -1,9 +1,13 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { Files } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InputBar } from "@/components/conversation/input-bar";
 import { MessageBubble } from "@/components/conversation/message-bubble";
 import { useConversation } from "@/hooks/use-conversation";
+import { useConversationStore } from "@/stores/conversation-store";
 
 function MessageSkeletons() {
   return (
@@ -23,6 +27,7 @@ function MessageSkeletons() {
 
 export function ConversationView({ conversationId }: { conversationId: string }) {
   const { state, sending, send } = useConversation(conversationId);
+  const { contextPanelOpen, toggleContextPanel } = useConversationStore();
   const endRef = useRef<HTMLDivElement>(null);
 
   const messageCount = state.status === "ready" ? state.messages.length : 0;
@@ -32,13 +37,29 @@ export function ConversationView({ conversationId }: { conversationId: string })
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {state.status === "ready" && (
-        <div className="border-b border-border px-4 py-2.5 flex-shrink-0">
-          <p className="text-sm font-medium text-foreground truncate max-w-[600px]">
-            {state.conversation.title}
-          </p>
+      <div className="border-b border-border px-4 py-2.5 flex-shrink-0 flex items-center gap-2 min-h-[42px]">
+        <div className="flex-1 min-w-0">
+          {state.status === "ready" ? (
+            <p className="text-sm font-medium text-foreground truncate">
+              {state.conversation.title}
+            </p>
+          ) : state.status === "loading" ? (
+            <Skeleton className="h-4 w-48" />
+          ) : null}
         </div>
-      )}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleContextPanel}
+          className={cn(
+            "flex-shrink-0 h-7 w-7 text-muted-foreground hover:text-foreground",
+            contextPanelOpen && "bg-secondary text-foreground"
+          )}
+          aria-label="Toggle documents panel"
+        >
+          <Files size={15} />
+        </Button>
+      </div>
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-[720px] mx-auto px-4 py-6">
