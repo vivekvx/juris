@@ -13,8 +13,14 @@ from pydantic import BaseModel
 from app.core.auth import get_current_user
 from app.models.document import Document, DocumentStatus
 from app.models.user import User
-from app.services.documents import create_document, update_document_status
-from app.services.storage import generate_storage_path, upload_file
+from app.services.documents import (
+    create_document,
+    delete_document,
+    get_document,
+    list_documents,
+    update_document_status,
+)
+from app.services.storage import delete_file, generate_storage_path, upload_file
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -128,3 +134,36 @@ async def upload_document(
     doc = update_document_status(doc.id, DocumentStatus.PROCESSING, current_user.uid)
     doc = update_document_status(doc.id, DocumentStatus.READY, current_user.uid)
     return _to_response(doc)
+
+
+@router.get("/", response_model=list[DocumentResponse])
+def list_documents_route(
+    current_user: User = Depends(get_current_user),
+) -> list[DocumentResponse]:
+    docs = list_documents(current_user.uid)
+    return [_to_response(d) for d in docs]
+
+
+@router.get("/{document_id}", response_model=DocumentResponse)
+def get_document_route(
+    document_id: str,
+    current_user: User = Depends(get_current_user),
+) -> DocumentResponse:
+    doc = get_document(document_id, current_user.uid)
+    return _to_response(doc)
+
+
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_document_route(
+    document_id: str,
+    current_user: User = Depends(get_current_user),
+) -> None:
+    doc = get_document(document_id, current_user.uid)
+    try:
+        delete_file(doc.storage_path)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to delete file from storage. Please try again.",
+        )
+    delete_document(document_id, current_user.uid)
