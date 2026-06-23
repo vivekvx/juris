@@ -12,6 +12,7 @@ import {
 } from "firebase/auth";
 import { getAuth } from "@/lib/firebase";
 import { authErrorMessage } from "@/lib/auth-errors";
+import { backendPost } from "@/lib/api";
 import type { User } from "@/types/user";
 
 export interface AuthContextValue {
@@ -49,15 +50,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function createSession(user: FirebaseUser): Promise<void> {
     const idToken = await user.getIdToken();
-    const res = await fetch("/api/auth/session", {
+
+    const sessionRes = await fetch("/api/auth/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ idToken }),
     });
-    if (!res.ok) {
+    if (!sessionRes.ok) {
       await firebaseSignOut(getAuth());
       throw new Error(
         "Signed in successfully, but we couldn't establish a secure session. Please try again."
+      );
+    }
+
+    const profileRes = await backendPost("/api/users/me", idToken);
+    if (!profileRes.ok) {
+      await firebaseSignOut(getAuth());
+      await fetch("/api/auth/session", { method: "DELETE" });
+      throw new Error(
+        "Signed in successfully, but we couldn't initialize your profile. Please try again."
       );
     }
   }
@@ -67,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const credential = await signInWithEmailAndPassword(getAuth(), email, password);
       await createSession(credential.user);
     } catch (err) {
-      if (err instanceof Error && err.message.includes("secure session")) throw err;
+      if (err instanceof Error && (err.message.includes("secure session") || err.message.includes("initialize your profile"))) throw err;
       throw new Error(authErrorMessage(err));
     }
   }
@@ -80,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       await createSession(credential.user);
     } catch (err) {
-      if (err instanceof Error && err.message.includes("secure session")) throw err;
+      if (err instanceof Error && (err.message.includes("secure session") || err.message.includes("initialize your profile"))) throw err;
       throw new Error(authErrorMessage(err));
     }
   }
@@ -90,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const credential = await signInWithPopup(getAuth(), new GoogleAuthProvider());
       await createSession(credential.user);
     } catch (err) {
-      if (err instanceof Error && err.message.includes("secure session")) throw err;
+      if (err instanceof Error && (err.message.includes("secure session") || err.message.includes("initialize your profile"))) throw err;
       throw new Error(authErrorMessage(err));
     }
   }
