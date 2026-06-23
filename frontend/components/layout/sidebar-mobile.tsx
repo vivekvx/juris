@@ -2,18 +2,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { List, Scales, ChatCircle, Files, Microphone, Brain, Gear } from "@phosphor-icons/react";
+import { List, Scales, Gear } from "@phosphor-icons/react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { NAV } from "@/lib/nav";
 
-const NAV = [
-  { href: "/workspace", icon: ChatCircle, label: "Workspace" },
-  { href: "/documents", icon: Files, label: "Documents" },
-  { href: "/voice", icon: Microphone, label: "Voice" },
-  { href: "/memory", icon: Brain, label: "Memory" },
-  { href: "/settings", icon: Gear, label: "Settings" },
-];
+const NAV_MOBILE = [...NAV, { href: "/settings", icon: Gear, label: "Settings" }];
 
 export function SidebarMobile() {
   const [open, setOpen] = useState(false);
@@ -40,7 +35,7 @@ export function SidebarMobile() {
             </SheetTitle>
           </SheetHeader>
           <nav className="flex flex-col gap-1 p-2">
-            {NAV.map(({ href, icon: Icon, label }) => {
+            {NAV_MOBILE.map(({ href, icon: Icon, label }) => {
               const active = pathname.startsWith(href);
               return (
                 <Link

@@ -7,6 +7,6 @@ interface ConversationStore {
 }
 
 export const useConversationStore = create<ConversationStore>((set) => ({
-  contextPanelOpen: true,
+  contextPanelOpen: false,
   toggleContextPanel: () => set((s) => ({ contextPanelOpen: !s.contextPanelOpen })),
 }));

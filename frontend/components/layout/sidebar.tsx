@@ -2,26 +2,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ChatCircle,
-  Files,
-  Microphone,
-  Brain,
   Gear,
   ArrowLineLeft,
   ArrowLineRight,
   Scales,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { NAV } from "@/lib/nav";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-const NAV = [
-  { href: "/workspace", icon: ChatCircle, label: "Workspace" },
-  { href: "/documents", icon: Files, label: "Documents" },
-  { href: "/voice", icon: Microphone, label: "Voice" },
-  { href: "/memory", icon: Brain, label: "Memory" },
-];
 
 export function SidebarNav({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();

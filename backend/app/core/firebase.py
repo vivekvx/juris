@@ -11,9 +11,8 @@ Usage (in FastAPI dependencies or services):
 
 Note: Call reset_firebase_app() only in tests. Never in production code.
 
-Threading: _ensure_app() is not thread-safe during the very first call.
-FastAPI's startup event (lifespan) initializes eagerly in production to avoid
-the race. Tests use reset_firebase_app() in fixtures for isolation.
+Threading: _ensure_app() is not thread-safe on the very first concurrent call.
+Initialize via FastAPI lifespan before serving requests to avoid the race.
 """
 from __future__ import annotations
 
