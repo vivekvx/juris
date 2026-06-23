@@ -47,10 +47,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
+  async function createSession(user: FirebaseUser): Promise<void> {
+    const idToken = await user.getIdToken();
+    const res = await fetch("/api/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    });
+    if (!res.ok) {
+      await firebaseSignOut(getAuth());
+      throw new Error(
+        "Signed in successfully, but we couldn't establish a secure session. Please try again."
+      );
+    }
+  }
+
   async function signIn(email: string, password: string): Promise<void> {
     try {
-      await signInWithEmailAndPassword(getAuth(), email, password);
+      const credential = await signInWithEmailAndPassword(getAuth(), email, password);
+      await createSession(credential.user);
     } catch (err) {
+      if (err instanceof Error && err.message.includes("secure session")) throw err;
       throw new Error(authErrorMessage(err));
     }
   }
@@ -61,15 +78,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (displayName?.trim()) {
         await updateProfile(credential.user, { displayName: displayName.trim() });
       }
+      await createSession(credential.user);
     } catch (err) {
+      if (err instanceof Error && err.message.includes("secure session")) throw err;
       throw new Error(authErrorMessage(err));
     }
   }
 
   async function signInWithGoogle(): Promise<void> {
     try {
-      await signInWithPopup(getAuth(), new GoogleAuthProvider());
+      const credential = await signInWithPopup(getAuth(), new GoogleAuthProvider());
+      await createSession(credential.user);
     } catch (err) {
+      if (err instanceof Error && err.message.includes("secure session")) throw err;
       throw new Error(authErrorMessage(err));
     }
   }
@@ -77,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signOut(): Promise<void> {
     try {
       await firebaseSignOut(getAuth());
+      await fetch("/api/auth/session", { method: "DELETE" });
     } catch (err) {
       throw new Error(authErrorMessage(err));
     }
