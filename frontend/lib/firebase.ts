@@ -1,12 +1,8 @@
 import { initializeApp, getApps, FirebaseApp, FirebaseOptions } from "firebase/app";
 import { getAuth as _getAuth, Auth } from "firebase/auth";
-import { getFirestore as _getFirestore, Firestore } from "firebase/firestore";
-import { getStorage as _getStorage, FirebaseStorage } from "firebase/storage";
 
 let _app: FirebaseApp | null = null;
 let _auth: Auth | null = null;
-let _firestore: Firestore | null = null;
-let _storage: FirebaseStorage | null = null;
 
 function getConfig(): FirebaseOptions {
   const required = [
@@ -38,7 +34,7 @@ function getConfig(): FirebaseOptions {
   };
 }
 
-export function getFirebaseApp(): FirebaseApp {
+function getFirebaseApp(): FirebaseApp {
   if (_app) return _app;
   _app = getApps().length > 0 ? getApps()[0] : initializeApp(getConfig());
   return _app;
@@ -50,14 +46,3 @@ export function getAuth(): Auth {
   return _auth;
 }
 
-export function getFirestore(): Firestore {
-  if (_firestore) return _firestore;
-  _firestore = _getFirestore(getFirebaseApp());
-  return _firestore;
-}
-
-export function getStorage(): FirebaseStorage {
-  if (_storage) return _storage;
-  _storage = _getStorage(getFirebaseApp());
-  return _storage;
-}

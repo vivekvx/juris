@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.models.user import User, UserDocument
+from app.models.user import User
 from app.services.users import create_user_if_missing, get_user, upsert_user
 
 _T0 = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)

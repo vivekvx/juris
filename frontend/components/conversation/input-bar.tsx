@@ -10,7 +10,6 @@ export function InputBar() {
 
   function handleSubmit() {
     if (!value.trim()) return;
-    // TODO: dispatch to conversation in Task 9+
     setValue("");
     ref.current?.focus();
   }

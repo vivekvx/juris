@@ -13,7 +13,7 @@ import { useSidebarStore } from "@/stores/sidebar-store";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-export function SidebarNav({ collapsed }: { collapsed: boolean }) {
+function SidebarNav({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
   return (
     <nav className="flex flex-col gap-1 p-2 flex-1">

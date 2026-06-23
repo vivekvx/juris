@@ -6,7 +6,7 @@ import pytest
 from fastapi import Depends
 from fastapi.testclient import TestClient
 
-from app.core.auth import get_current_user, verify_firebase_token
+from app.core.auth import get_current_user
 from app.main import create_app
 from app.models.user import User
 
@@ -83,7 +83,7 @@ def test_invalid_token_returns_401(
 def test_expired_token_returns_401(
     client: TestClient, mock_firebase: MagicMock
 ) -> None:
-    import firebase_admin.auth as fb_auth  # type: ignore[import-untyped]
+    import firebase_admin.auth as fb_auth
 
     mock_firebase.side_effect = fb_auth.ExpiredIdTokenError("expired", None)
     resp = client.get("/protected", headers={"Authorization": "Bearer expired-token"})
@@ -94,7 +94,7 @@ def test_expired_token_returns_401(
 def test_revoked_token_returns_401(
     client: TestClient, mock_firebase: MagicMock
 ) -> None:
-    import firebase_admin.auth as fb_auth  # type: ignore[import-untyped]
+    import firebase_admin.auth as fb_auth
 
     mock_firebase.side_effect = fb_auth.RevokedIdTokenError("revoked")
     resp = client.get("/protected", headers={"Authorization": "Bearer revoked-token"})
@@ -156,7 +156,7 @@ def test_user_optional_fields_default_to_none(mock_firebase: MagicMock) -> None:
 def test_error_detail_does_not_leak_token(
     client: TestClient, mock_firebase: MagicMock
 ) -> None:
-    import firebase_admin.auth as fb_auth  # type: ignore[import-untyped]
+    import firebase_admin.auth as fb_auth
 
     mock_firebase.side_effect = fb_auth.InvalidIdTokenError("secret-internal-details")
     resp = client.get("/protected", headers={"Authorization": "Bearer secret-token"})
