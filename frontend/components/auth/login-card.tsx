@@ -1,13 +1,12 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { Scales } from "@phosphor-icons/react";
-import { getAuth } from "@/lib/firebase";
-import { authErrorMessage } from "@/lib/auth-errors";
+import { useAuth } from "@/hooks/use-auth";
 import { GoogleButton } from "./google-button";
 
 export function LoginCard() {
+  const auth = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -19,9 +18,9 @@ export function LoginCard() {
     setError(null);
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(getAuth(), email, password);
+      await auth.signIn(email, password);
     } catch (err) {
-      setError(authErrorMessage(err));
+      setError(err instanceof Error ? err.message : "Sign-in failed. Try again.");
     } finally {
       setLoading(false);
     }
@@ -31,9 +30,9 @@ export function LoginCard() {
     setError(null);
     setGoogleLoading(true);
     try {
-      await signInWithPopup(getAuth(), new GoogleAuthProvider());
+      await auth.signInWithGoogle();
     } catch (err) {
-      setError(authErrorMessage(err));
+      setError(err instanceof Error ? err.message : "Sign-in failed. Try again.");
     } finally {
       setGoogleLoading(false);
     }

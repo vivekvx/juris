@@ -1,18 +1,12 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import {
-  createUserWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider,
-  updateProfile,
-} from "firebase/auth";
 import { Scales } from "@phosphor-icons/react";
-import { getAuth } from "@/lib/firebase";
-import { authErrorMessage } from "@/lib/auth-errors";
+import { useAuth } from "@/hooks/use-auth";
 import { GoogleButton } from "./google-button";
 
 export function SignupCard() {
+  const auth = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,12 +19,9 @@ export function SignupCard() {
     setError(null);
     setLoading(true);
     try {
-      const credential = await createUserWithEmailAndPassword(getAuth(), email, password);
-      if (name.trim()) {
-        await updateProfile(credential.user, { displayName: name.trim() });
-      }
+      await auth.signUp(email, password, name);
     } catch (err) {
-      setError(authErrorMessage(err));
+      setError(err instanceof Error ? err.message : "Sign-up failed. Try again.");
     } finally {
       setLoading(false);
     }
@@ -40,9 +31,9 @@ export function SignupCard() {
     setError(null);
     setGoogleLoading(true);
     try {
-      await signInWithPopup(getAuth(), new GoogleAuthProvider());
+      await auth.signInWithGoogle();
     } catch (err) {
-      setError(authErrorMessage(err));
+      setError(err instanceof Error ? err.message : "Sign-in failed. Try again.");
     } finally {
       setGoogleLoading(false);
     }

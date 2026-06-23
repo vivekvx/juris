@@ -2,15 +2,20 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SignupCard } from "../signup-card";
 
-vi.mock("@/lib/firebase", () => ({ getAuth: vi.fn(() => ({})) }));
-vi.mock("firebase/auth", () => ({
-  createUserWithEmailAndPassword: vi.fn(),
-  signInWithPopup: vi.fn(),
-  GoogleAuthProvider: class {},
-  updateProfile: vi.fn(),
-}));
+const mockSignUp = vi.fn();
+const mockSignInWithGoogle = vi.fn();
 
-import * as firebaseAuth from "firebase/auth";
+vi.mock("@/hooks/use-auth", () => ({
+  useAuth: () => ({
+    signUp: mockSignUp,
+    signInWithGoogle: mockSignInWithGoogle,
+    user: null,
+    loading: false,
+    isAuthenticated: false,
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+  }),
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -41,44 +46,31 @@ describe("SignupCard", () => {
     expect(screen.getByRole("button", { name: /create account/i })).not.toBeDisabled();
   });
 
-  it("calls createUserWithEmailAndPassword on submit", async () => {
-    vi.mocked(firebaseAuth.createUserWithEmailAndPassword).mockResolvedValue({
-      user: { displayName: null },
-    } as never);
+  it("calls signUp on submit", async () => {
+    mockSignUp.mockResolvedValue(undefined);
     render(<SignupCard />);
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "a@b.com" } });
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "secret123" } });
     fireEvent.submit(screen.getByLabelText(/email/i).closest("form")!);
     await waitFor(() =>
-      expect(firebaseAuth.createUserWithEmailAndPassword).toHaveBeenCalledWith(
-        {},
-        "a@b.com",
-        "secret123"
-      )
+      expect(mockSignUp).toHaveBeenCalledWith("a@b.com", "secret123", "")
     );
   });
 
-  it("calls updateProfile when name is provided", async () => {
-    vi.mocked(firebaseAuth.createUserWithEmailAndPassword).mockResolvedValue({
-      user: { displayName: null },
-    } as never);
-    vi.mocked(firebaseAuth.updateProfile).mockResolvedValue(undefined);
+  it("passes name to signUp when provided", async () => {
+    mockSignUp.mockResolvedValue(undefined);
     render(<SignupCard />);
     fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: "Priya Sharma" } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "a@b.com" } });
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "secret123" } });
     fireEvent.submit(screen.getByLabelText(/email/i).closest("form")!);
     await waitFor(() =>
-      expect(firebaseAuth.updateProfile).toHaveBeenCalledWith(
-        expect.anything(),
-        { displayName: "Priya Sharma" }
-      )
+      expect(mockSignUp).toHaveBeenCalledWith("a@b.com", "secret123", "Priya Sharma")
     );
   });
 
-  it("shows error on email already in use", async () => {
-    const err = Object.assign(new Error(), { code: "auth/email-already-in-use" });
-    vi.mocked(firebaseAuth.createUserWithEmailAndPassword).mockRejectedValue(err);
+  it("shows error on signup failure", async () => {
+    mockSignUp.mockRejectedValue(new Error("An account with this email already exists."));
     render(<SignupCard />);
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "a@b.com" } });
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "secret123" } });

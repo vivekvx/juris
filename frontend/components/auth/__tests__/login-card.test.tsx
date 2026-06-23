@@ -2,15 +2,20 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { LoginCard } from "../login-card";
 
-vi.mock("@/lib/firebase", () => ({ getAuth: vi.fn(() => ({})) }));
-vi.mock("firebase/auth", () => ({
-  signInWithEmailAndPassword: vi.fn(),
-  signInWithPopup: vi.fn(),
-  // Arrow functions cannot be used as constructors; use class to allow `new`
-  GoogleAuthProvider: class {},
-}));
+const mockSignIn = vi.fn();
+const mockSignInWithGoogle = vi.fn();
 
-import * as firebaseAuth from "firebase/auth";
+vi.mock("@/hooks/use-auth", () => ({
+  useAuth: () => ({
+    signIn: mockSignIn,
+    signInWithGoogle: mockSignInWithGoogle,
+    user: null,
+    loading: false,
+    isAuthenticated: false,
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+  }),
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -40,20 +45,19 @@ describe("LoginCard", () => {
     expect(screen.getByRole("button", { name: /sign in/i })).not.toBeDisabled();
   });
 
-  it("calls signInWithEmailAndPassword on submit", async () => {
-    vi.mocked(firebaseAuth.signInWithEmailAndPassword).mockResolvedValue({} as never);
+  it("calls signIn on submit", async () => {
+    mockSignIn.mockResolvedValue(undefined);
     render(<LoginCard />);
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "a@b.com" } });
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "secret" } });
     fireEvent.submit(screen.getByLabelText(/email/i).closest("form")!);
     await waitFor(() =>
-      expect(firebaseAuth.signInWithEmailAndPassword).toHaveBeenCalledWith({}, "a@b.com", "secret")
+      expect(mockSignIn).toHaveBeenCalledWith("a@b.com", "secret")
     );
   });
 
   it("shows error message on auth failure", async () => {
-    const err = Object.assign(new Error(), { code: "auth/invalid-credential" });
-    vi.mocked(firebaseAuth.signInWithEmailAndPassword).mockRejectedValue(err);
+    mockSignIn.mockRejectedValue(new Error("Incorrect email or password."));
     render(<LoginCard />);
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "a@b.com" } });
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "wrong" } });
@@ -63,11 +67,11 @@ describe("LoginCard", () => {
     );
   });
 
-  it("calls signInWithPopup on Google button click", async () => {
-    vi.mocked(firebaseAuth.signInWithPopup).mockResolvedValue({} as never);
+  it("calls signInWithGoogle on Google button click", async () => {
+    mockSignInWithGoogle.mockResolvedValue(undefined);
     render(<LoginCard />);
     fireEvent.click(screen.getByText("Continue with Google"));
-    await waitFor(() => expect(firebaseAuth.signInWithPopup).toHaveBeenCalledOnce());
+    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledOnce());
   });
 
   it("links to signup page", () => {
