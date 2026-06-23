@@ -12,11 +12,12 @@ import { NAV } from "@/lib/nav";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { SidebarConversations } from "@/components/layout/sidebar-conversations";
 
 function SidebarNav({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
   return (
-    <nav className="flex flex-col gap-1 p-2 flex-1">
+    <nav className="flex flex-col gap-1 p-2">
       {NAV.map(({ href, icon: Icon, label }) => {
         const active = pathname.startsWith(href);
         const link = (
@@ -66,7 +67,14 @@ export function SidebarDesktop() {
           {!collapsed && <span className="text-heading text-foreground">Juris</span>}
         </div>
 
-        <SidebarNav collapsed={collapsed} />
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <SidebarNav collapsed={collapsed} />
+          {collapsed ? (
+            <div className="flex-1" />
+          ) : (
+            <SidebarConversations />
+          )}
+        </div>
 
         <div className="p-2 border-t border-border flex flex-col gap-1">
           {collapsed ? (
