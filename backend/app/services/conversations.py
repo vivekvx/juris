@@ -129,10 +129,55 @@ def create_message(conv_id: str, owner_uid: str, content: str) -> Message:
     return message
 
 
-def list_messages(conv_id: str, owner_uid: str, limit: int = 50) -> list[Message]:
+def create_assistant_message(
+    conv_id: str,
+    owner_uid: str,
+    content: str,
+    citations: list[dict[str, object]] | None = None,
+) -> Message:
     db = get_firestore_client()
     conv_ref = db.collection(_CONVERSATIONS).document(conv_id)
     _get_and_authorize(conv_id, owner_uid)
 
+    now = _utc_now()
+    msg_ref = conv_ref.collection(_MESSAGES).document()
+    message = Message(id=msg_ref.id, role="assistant", content=content, created_at=now, citations=citations)
+    msg_ref.set(message.model_dump())
+
+    conv_ref.update({"last_message_at": _iso(now), "updated_at": _iso(now)})
+    return message
+
+
+def patch_conversation(
+    conv_id: str,
+    owner_uid: str,
+    updates: dict[str, object],
+) -> Conversation:
+    _, conv = _get_and_authorize(conv_id, owner_uid)
+    get_firestore_client().collection(_CONVERSATIONS).document(conv_id).update(updates)
+    merged = {**conv.model_dump(), **updates}
+    return Conversation.model_validate(merged)
+
+
+def list_messages(
+    conv_id: str,
+    owner_uid: str,
+    limit: int = 50,
+    tail: bool = False,
+) -> list[Message]:
+    db = get_firestore_client()
+    conv_ref = db.collection(_CONVERSATIONS).document(conv_id)
+    _get_and_authorize(conv_id, owner_uid)
+
+    if tail:
+        from google.cloud.firestore import Query
+        snaps = (
+            conv_ref.collection(_MESSAGES)
+            .order_by("created_at", direction=Query.DESCENDING)
+            .limit(limit)
+            .stream()
+        )
+        msgs = [_snap_to_message(s) for s in snaps]
+        return list(reversed(msgs))
     snaps = conv_ref.collection(_MESSAGES).order_by("created_at").limit(limit).stream()
     return [_snap_to_message(s) for s in snaps]
