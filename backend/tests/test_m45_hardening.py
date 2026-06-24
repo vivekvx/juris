@@ -88,3 +88,28 @@ def test_list_messages_default_returns_oldest_first() -> None:
         assert "DESCENDING" not in str(call_args)
         assert msgs[0].id == "msg_1"
         assert msgs[1].id == "msg_2"
+
+
+# ---------------------------------------------------------------------------
+# Fix 2: Ownership check before StreamingResponse
+# ---------------------------------------------------------------------------
+
+def test_send_message_returns_404_before_streaming_for_wrong_owner() -> None:
+    """Wrong-owner conv must 404 cleanly, not open a stream then abort."""
+    from fastapi import HTTPException
+    from fastapi.testclient import TestClient
+    from app.main import create_app
+    from app.core.auth import get_current_user
+
+    with patch("app.api.chat.get_conversation") as mock_get_conv:
+        mock_get_conv.side_effect = HTTPException(status_code=404, detail="Conversation not found.")
+
+        app = create_app()
+        app.dependency_overrides[get_current_user] = lambda: MagicMock(uid="uid_attacker")
+        test_client = TestClient(app)
+        resp = test_client.post(
+            "/api/conversations/conv_victim/messages",
+            json={"content": "hello"},
+        )
+        assert resp.status_code == 404
+        assert "text/event-stream" not in resp.headers.get("content-type", "")
