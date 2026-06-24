@@ -226,3 +226,65 @@ def test_background_tasks_set_exists_in_chat_module() -> None:
     from app.api import chat as chat_module
     assert hasattr(chat_module, "_background_tasks"), "_background_tasks set missing from chat.py"
     assert isinstance(chat_module._background_tasks, set)
+
+
+# ---------------------------------------------------------------------------
+# Fix 6: Document ownership returns 404 (not 403) for wrong owner
+# ---------------------------------------------------------------------------
+
+def test_get_document_wrong_owner_raises_404() -> None:
+    """Wrong-owner document access must return 404 to prevent ID enumeration."""
+    from fastapi import HTTPException
+    from app.services.documents import get_document
+
+    with patch("app.services.documents.get_firestore_client") as mock_get:
+        mock_db = MagicMock()
+        mock_get.return_value = mock_db
+
+        snap = MagicMock()
+        snap.exists = True
+        snap.to_dict.return_value = {
+            "id": "doc_001",
+            "owner_uid": "uid_real_owner",
+            "original_filename": "contract.pdf",
+            "filename": "contract.pdf",
+            "content_type": "application/pdf",
+            "mime_type": "application/pdf",
+            "status": "READY",
+            "size_bytes": 1024,
+            "storage_path": "uid_real_owner/doc_001/contract.pdf",
+            "created_at": "2024-06-01T12:00:00Z",
+            "updated_at": "2024-06-01T12:00:00Z",
+        }
+        ref = MagicMock()
+        ref.get.return_value = snap
+        mock_db.collection.return_value.document.return_value = ref
+
+        with pytest.raises(HTTPException) as exc_info:
+            get_document("doc_001", "uid_attacker")
+
+        assert exc_info.value.status_code == 404, (
+            f"Expected 404 to prevent ID enumeration, got {exc_info.value.status_code}"
+        )
+
+
+def test_get_document_missing_still_raises_404() -> None:
+    """Missing document must still return 404."""
+    from fastapi import HTTPException
+    from app.services.documents import get_document
+
+    with patch("app.services.documents.get_firestore_client") as mock_get:
+        mock_db = MagicMock()
+        mock_get.return_value = mock_db
+
+        snap = MagicMock()
+        snap.exists = False
+        snap.to_dict.return_value = None
+        ref = MagicMock()
+        ref.get.return_value = snap
+        mock_db.collection.return_value.document.return_value = ref
+
+        with pytest.raises(HTTPException) as exc_info:
+            get_document("doc_missing", "uid_abc")
+
+        assert exc_info.value.status_code == 404

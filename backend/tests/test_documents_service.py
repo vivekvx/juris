@@ -122,11 +122,11 @@ def test_get_not_found_raises_404(mock_db: MagicMock) -> None:
     assert exc.value.status_code == 404
 
 
-def test_get_wrong_owner_raises_403(mock_db: MagicMock) -> None:
+def test_get_wrong_owner_raises_404(mock_db: MagicMock) -> None:
     _make_ref(mock_db, exists=True, data=_data(owner_uid="uid_abc"))
     with pytest.raises(HTTPException) as exc:
         get_document("doc_001", "uid_attacker")
-    assert exc.value.status_code == 403
+    assert exc.value.status_code == 404
 
 
 # ---------------------------------------------------------------------------

@@ -45,7 +45,7 @@ def get_document(document_id: str, owner_uid: str) -> Document:
         raise HTTPException(status_code=404, detail="Document not found.")
     doc = _snap_to_doc(snap)
     if doc.owner_uid != owner_uid:
-        raise HTTPException(status_code=403, detail="Access denied.")
+        raise HTTPException(status_code=404, detail="Document not found.")
     return doc
 
 
