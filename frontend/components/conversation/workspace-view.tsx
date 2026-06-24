@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { getAuth } from "@/lib/firebase";
-import { createConversation, sendMessage } from "@/lib/api";
+import { createConversation } from "@/lib/api";
 import { EmptyConversation } from "@/components/conversation/empty-conversation";
 import { InputBar } from "@/components/conversation/input-bar";
 
@@ -27,7 +27,8 @@ export function WorkspaceView() {
         }
         const idToken = await currentUser.getIdToken();
         const conv = await createConversation(titleFromContent(content), idToken);
-        await sendMessage(conv.id, content, idToken);
+        // Pass initial message to ConversationView via sessionStorage
+        sessionStorage.setItem("juris_initial_msg", content);
         router.push(`/workspace/${conv.id}`);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to start conversation.");

@@ -15,6 +15,8 @@ class Conversation(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_message_at: datetime | None = None
+    document_ids: list[str] | None = None
+    title_generated: bool = False
 
     @field_validator("created_at", "updated_at")
     @classmethod
@@ -56,6 +58,7 @@ class Message(BaseModel):
     role: Literal["user", "assistant"]
     content: str
     created_at: datetime
+    citations: list[dict[str, object]] | None = None
 
     @field_validator("created_at")
     @classmethod

@@ -26,14 +26,16 @@ function MessageSkeletons() {
 }
 
 export function ConversationView({ conversationId }: { conversationId: string }) {
-  const { state, sending, send } = useConversation(conversationId);
+  const { state, sending, send, streamingMessage } = useConversation(conversationId);
   const { contextPanelOpen, toggleContextPanel } = useConversationStore();
   const endRef = useRef<HTMLDivElement>(null);
 
   const messageCount = state.status === "ready" ? state.messages.length : 0;
+  const hasStreaming = streamingMessage !== null;
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messageCount]);
+  }, [messageCount, hasStreaming]);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -73,7 +75,7 @@ export function ConversationView({ conversationId }: { conversationId: string })
 
           {state.status === "ready" && (
             <div className="space-y-4">
-              {state.messages.length === 0 ? (
+              {state.messages.length === 0 && !streamingMessage ? (
                 <p className="text-sm text-muted-foreground text-center py-16">
                   No messages yet.
                 </p>
@@ -82,6 +84,22 @@ export function ConversationView({ conversationId }: { conversationId: string })
                   <MessageBubble key={msg.id} message={msg} />
                 ))
               )}
+
+              {streamingMessage && (
+                <MessageBubble
+                  message={{
+                    id: "streaming",
+                    role: "assistant",
+                    content: streamingMessage.content || "…",
+                    created_at: new Date().toISOString(),
+                    citations: streamingMessage.citations.length > 0
+                      ? streamingMessage.citations
+                      : null,
+                  }}
+                  streaming
+                />
+              )}
+
               <div ref={endRef} />
             </div>
           )}

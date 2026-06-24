@@ -1,7 +1,7 @@
-"""Conversation API routes.
+"""Conversation API routes (CRUD only — streaming chat is in chat.py).
 
 Routes orchestrate services only — no Firestore, no Firebase here.
-All role assignment is server-side ("user" hardcoded in M2; M3 adds AI responses).
+Ownership checks return 404 so callers cannot enumerate other users' resources.
 """
 from __future__ import annotations
 
@@ -16,12 +16,13 @@ from app.models.conversation import Conversation
 from app.models.user import User
 from app.services.conversations import (
     create_conversation,
-    create_message,
     delete_conversation,
     get_conversation,
     list_conversations,
     list_messages,
+    patch_conversation,
 )
+from app.services.documents import get_document
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -34,12 +35,13 @@ class CreateConversationRequest(BaseModel):
     title: str
 
 
-class CreateMessageRequest(BaseModel):
-    content: str
+class PatchConversationRequest(BaseModel):
+    document_ids: list[str] | None = None  # None resets to "all docs" mode
+    title: str | None = None
 
 
 # ---------------------------------------------------------------------------
-# Response shapes (owner_uid never returned)
+# Response shapes (owner_uid / title_generated never returned)
 # ---------------------------------------------------------------------------
 
 class ConversationResponse(BaseModel):
@@ -48,6 +50,7 @@ class ConversationResponse(BaseModel):
     created_at: str
     updated_at: str
     last_message_at: str | None
+    document_ids: list[str] | None = None
 
 
 class MessageResponse(BaseModel):
@@ -55,6 +58,7 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     created_at: str
+    citations: list[dict[str, object]] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -62,7 +66,7 @@ class MessageResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 def _conv_response(conv: Conversation) -> ConversationResponse:
-    data = conv.model_dump(mode="json", exclude={"owner_uid"})
+    data = conv.model_dump(mode="json", exclude={"owner_uid", "title_generated"})
     return ConversationResponse(**data)
 
 
@@ -72,6 +76,7 @@ def _msg_response(msg_data: dict[str, object]) -> MessageResponse:
         role=str(msg_data["role"]),
         content=str(msg_data["content"]),
         created_at=str(msg_data["created_at"]),
+        citations=msg_data.get("citations"),  # type: ignore[arg-type]
     )
 
 
@@ -114,26 +119,35 @@ def get_conversation_route(
     return _conv_response(get_conversation(conv_id, current_user.uid))
 
 
+@router.patch("/{conv_id}", response_model=ConversationResponse)
+def patch_conversation_route(
+    conv_id: str,
+    body: PatchConversationRequest,
+    current_user: User = Depends(get_current_user),
+) -> ConversationResponse:
+    updates: dict[str, object] = {}
+
+    if body.document_ids is not None:
+        # Validate each doc_id belongs to this user (raises 404 otherwise)
+        for doc_id in body.document_ids:
+            get_document(doc_id, current_user.uid)
+        updates["document_ids"] = body.document_ids
+    else:
+        updates["document_ids"] = None  # reset to "all docs" mode
+
+    if body.title is not None:
+        updates["title"] = body.title
+
+    conv = patch_conversation(conv_id, current_user.uid, updates)
+    return _conv_response(conv)
+
+
 @router.delete("/{conv_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_conversation_route(
     conv_id: str,
     current_user: User = Depends(get_current_user),
 ) -> None:
     delete_conversation(conv_id, current_user.uid)
-
-
-@router.post(
-    "/{conv_id}/messages",
-    response_model=MessageResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_message_route(
-    conv_id: str,
-    body: CreateMessageRequest,
-    current_user: User = Depends(get_current_user),
-) -> MessageResponse:
-    msg = create_message(conv_id, current_user.uid, body.content)
-    return _msg_response(msg.model_dump(mode="json"))
 
 
 @router.get("/{conv_id}/messages", response_model=list[MessageResponse])
