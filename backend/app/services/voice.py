@@ -1,9 +1,10 @@
-"""Google Cloud Speech-to-Text v2 wrapper for voice transcription."""
+"""Google Cloud Speech-to-Text v2 and Text-to-Speech wrappers."""
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
 
+from google.cloud import texttospeech
 from google.cloud.speech_v2 import SpeechAsyncClient
 from google.cloud.speech_v2.types import cloud_speech
 
@@ -28,8 +29,16 @@ class NoSpeechDetectedError(Exception):
     """Provider returned a response with no usable transcript."""
 
 
+class TtsProviderError(Exception):
+    """TTS provider returned an error or is unreachable."""
+
+
 def _get_stt_client() -> SpeechAsyncClient:
     return SpeechAsyncClient()
+
+
+def _get_tts_client() -> texttospeech.TextToSpeechAsyncClient:
+    return texttospeech.TextToSpeechAsyncClient()
 
 
 async def transcribe(
@@ -82,3 +91,22 @@ async def transcribe(
         duration_ms=duration_ms,
         confidence=float(alt.confidence),
     )
+
+
+async def synthesize(text: str, voice: str, language: str) -> bytes:
+    """Send text to Cloud Text-to-Speech; return MP3 audio bytes."""
+    client = _get_tts_client()
+    request = texttospeech.SynthesizeSpeechRequest(
+        input=texttospeech.SynthesisInput(text=text),
+        voice=texttospeech.VoiceSelectionParams(language_code=language, name=voice),
+        audio_config=texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3,
+        ),
+    )
+    try:
+        response = await client.synthesize_speech(request=request)
+    except Exception as exc:
+        _log.error("TTS provider error: %s", exc)
+        raise TtsProviderError("Text-to-speech service is temporarily unavailable.") from exc
+    audio: bytes = response.audio_content
+    return audio

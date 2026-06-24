@@ -1,4 +1,4 @@
-"""Tests for POST /api/voice/transcribe — STT provider mocked, no network calls."""
+"""Tests for POST /api/voice/transcribe and POST /api/voice/synthesize — providers mocked."""
 from __future__ import annotations
 
 from collections.abc import Generator
@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from app.core.auth import get_current_user
 from app.main import create_app
 from app.models.user import User
-from app.services.voice import NoSpeechDetectedError, Transcript, VoiceProviderError
+from app.services.voice import NoSpeechDetectedError, Transcript, TtsProviderError, VoiceProviderError
 
 _USER = User(uid="uid_test", email="test@example.com", display_name=None, photo_url=None)
 
@@ -139,5 +139,107 @@ def test_transcribe_provider_error_returns_503(client: TestClient) -> None:
         new=AsyncMock(side_effect=VoiceProviderError("timeout")),
     ):
         resp = _upload(client, _WEBM_BYTES)
+    assert resp.status_code == 503
+    assert "unavailable" in resp.json()["detail"].lower()
+
+
+# ===========================================================================
+# POST /api/voice/synthesize
+# ===========================================================================
+
+_FAKE_MP3 = b"ID3" + b"\x00" * 64  # magic-byte valid MP3 stub
+
+
+def _synthesize(c: TestClient, text: str, voice: str | None = None, language: str | None = None) -> object:
+    payload: dict[str, str] = {"text": text}
+    if voice:
+        payload["voice"] = voice
+    if language:
+        payload["language"] = language
+    return c.post("/api/voice/synthesize", json=payload)
+
+
+# ---------------------------------------------------------------------------
+# Success path
+# ---------------------------------------------------------------------------
+
+def test_synthesize_returns_200_audio_mpeg(client: TestClient) -> None:
+    with patch("app.api.voice.synthesize", new=AsyncMock(return_value=_FAKE_MP3)):
+        resp = _synthesize(client, "What are my rights under this contract?")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "audio/mpeg"
+    assert resp.content == _FAKE_MP3
+
+
+def test_synthesize_cache_control_header(client: TestClient) -> None:
+    with patch("app.api.voice.synthesize", new=AsyncMock(return_value=_FAKE_MP3)):
+        resp = _synthesize(client, "Hello")
+    assert "private" in resp.headers["cache-control"]
+    assert "max-age=86400" in resp.headers["cache-control"]
+
+
+def test_synthesize_voice_override_accepted(client: TestClient) -> None:
+    with patch("app.api.voice.synthesize", new=AsyncMock(return_value=_FAKE_MP3)) as mock_syn:
+        resp = _synthesize(client, "Namaste", voice="hi-IN-Neural2-A")
+    assert resp.status_code == 200
+    mock_syn.assert_awaited_once_with("Namaste", "hi-IN-Neural2-A", "hi-IN")
+
+
+def test_synthesize_language_override_accepted(client: TestClient) -> None:
+    with patch("app.api.voice.synthesize", new=AsyncMock(return_value=_FAKE_MP3)) as mock_syn:
+        resp = _synthesize(client, "Hello", language="ta-IN")
+    assert resp.status_code == 200
+    # language override wins over voice-derived language
+    _, _, called_lang = mock_syn.call_args.args
+    assert called_lang == "ta-IN"
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+def test_synthesize_requires_auth() -> None:
+    app = create_app()
+    with TestClient(app) as anon:
+        resp = _synthesize(anon, "Hello")
+    assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Validation errors
+# ---------------------------------------------------------------------------
+
+def test_synthesize_empty_text_returns_400(client: TestClient) -> None:
+    resp = _synthesize(client, "   ")
+    assert resp.status_code == 400
+    assert "empty" in resp.json()["detail"].lower()
+
+
+def test_synthesize_text_too_long_returns_413(client: TestClient) -> None:
+    settings_mock = MagicMock()
+    settings_mock.voice_max_synthesize_chars = 10
+    settings_mock.tts_voice_default = "en-IN-Neural2-A"
+    with patch("app.api.voice.get_settings", return_value=settings_mock):
+        resp = _synthesize(client, "This text is longer than ten")
+    assert resp.status_code == 413
+    assert "exceeds" in resp.json()["detail"].lower()
+
+
+def test_synthesize_invalid_voice_returns_400(client: TestClient) -> None:
+    resp = _synthesize(client, "Hello", voice="badvoice")
+    assert resp.status_code == 400
+    assert "Invalid voice" in resp.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Provider error
+# ---------------------------------------------------------------------------
+
+def test_synthesize_provider_error_returns_503(client: TestClient) -> None:
+    with patch(
+        "app.api.voice.synthesize",
+        new=AsyncMock(side_effect=TtsProviderError("quota exceeded")),
+    ):
+        resp = _synthesize(client, "Hello")
     assert resp.status_code == 503
     assert "unavailable" in resp.json()["detail"].lower()

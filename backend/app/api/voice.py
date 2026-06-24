@@ -8,12 +8,19 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from app.config.settings import get_settings
 from app.core.auth import get_current_user
 from app.models.user import User
-from app.services.voice import NoSpeechDetectedError, VoiceProviderError, transcribe
+from app.services.voice import (
+    NoSpeechDetectedError,
+    TtsProviderError,
+    VoiceProviderError,
+    synthesize,
+    transcribe,
+)
 
 _log = logging.getLogger(__name__)
 
@@ -112,4 +119,74 @@ async def transcribe_audio(
         language=result.language,
         duration_ms=result.duration_ms,
         confidence=result.confidence,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _validate_voice_name(voice: str) -> None:
+    """Raise 400 if the voice name lacks the lang-region-type structure."""
+    if len(voice.split("-")) < 3:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid voice name {voice!r}. "
+                "Expected format: 'lang-region-type[-variant]' (e.g. 'en-IN-Neural2-A')."
+            ),
+        )
+
+
+def _language_from_voice(voice: str) -> str:
+    """Extract BCP-47 language code from a Cloud TTS voice name."""
+    parts = voice.split("-")
+    return f"{parts[0]}-{parts[1]}"
+
+
+# ---------------------------------------------------------------------------
+# POST /api/voice/synthesize
+# ---------------------------------------------------------------------------
+
+class SynthesizeRequest(BaseModel):
+    text: str
+    voice: str | None = None
+    language: str | None = None
+
+
+@router.post("/synthesize")
+async def synthesize_speech(
+    body: SynthesizeRequest,
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    settings = get_settings()
+
+    if not body.text.strip():
+        raise HTTPException(status_code=400, detail="Text must not be empty.")
+
+    if len(body.text) > settings.voice_max_synthesize_chars:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                f"Text length {len(body.text):,} characters exceeds the "
+                f"{settings.voice_max_synthesize_chars:,} character limit."
+            ),
+        )
+
+    voice = body.voice or settings.tts_voice_default
+    _validate_voice_name(voice)
+    language = body.language or _language_from_voice(voice)
+
+    try:
+        audio = await synthesize(body.text, voice, language)
+    except TtsProviderError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Text-to-speech service is temporarily unavailable.",
+        )
+
+    return Response(
+        content=audio,
+        media_type="audio/mpeg",
+        headers={"Cache-Control": "private, max-age=86400"},
     )

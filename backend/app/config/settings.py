@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     stt_model: str = "latest_long"
     voice_max_audio_seconds: int = 120
     voice_max_audio_bytes: int = 10 * 1024 * 1024
+    tts_provider: str = "google_cloud"
+    tts_voice_default: str = "en-IN-Neural2-A"
+    tts_audio_encoding: str = "MP3"
+    voice_max_synthesize_chars: int = 5000
 
     # Optional observability (no-op until set)
     langfuse_secret_key: str = ""
