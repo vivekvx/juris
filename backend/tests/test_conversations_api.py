@@ -232,64 +232,7 @@ def test_delete_conversation_requires_auth() -> None:
     assert response.status_code == 401
 
 
-# ---------------------------------------------------------------------------
-# POST /api/conversations/{conv_id}/messages
-# ---------------------------------------------------------------------------
-
-def test_create_message_returns_201(client: TestClient) -> None:
-    with patch("app.api.conversations.create_message") as mc:
-        mc.return_value = _make_msg()
-        response = client.post(
-            f"/api/conversations/{_CONV_ID}/messages",
-            json={"content": "What does clause 3 mean?"},
-        )
-    assert response.status_code == 201
-
-
-def test_create_message_response_shape(client: TestClient) -> None:
-    with patch("app.api.conversations.create_message") as mc:
-        mc.return_value = _make_msg()
-        response = client.post(
-            f"/api/conversations/{_CONV_ID}/messages",
-            json={"content": "What does clause 3 mean?"},
-        )
-    body = response.json()
-    assert isinstance(body["id"], str)
-    assert body["role"] == "user"
-    assert body["content"] == "What does clause 3 mean?"
-    assert isinstance(body["created_at"], str)
-    assert body["created_at"].endswith("Z")
-
-
-def test_create_message_role_is_always_user(client: TestClient) -> None:
-    with patch("app.api.conversations.create_message") as mc:
-        mc.return_value = _make_msg(role="user")
-        response = client.post(
-            f"/api/conversations/{_CONV_ID}/messages",
-            json={"content": "Hello"},
-        )
-    assert response.json()["role"] == "user"
-
-
-def test_create_message_passes_content_to_service(client: TestClient) -> None:
-    with patch("app.api.conversations.create_message") as mc:
-        mc.return_value = _make_msg()
-        client.post(
-            f"/api/conversations/{_CONV_ID}/messages",
-            json={"content": "What does clause 3 mean?"},
-        )
-    assert mc.call_args.args[2] == "What does clause 3 mean?"
-
-
-def test_create_message_not_found_returns_404(client: TestClient) -> None:
-    with patch("app.api.conversations.create_message") as mc:
-        mc.side_effect = HTTPException(status_code=404, detail="Conversation not found.")
-        response = client.post(
-            "/api/conversations/missing/messages",
-            json={"content": "Hello"},
-        )
-    assert response.status_code == 404
-
+# POST /{conv_id}/messages moved to chat.py (SSE); tested in test_m45_hardening.py
 
 def test_create_message_requires_auth() -> None:
     app = create_app()

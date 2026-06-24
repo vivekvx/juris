@@ -75,6 +75,7 @@ def test_document_dump_contains_all_fields() -> None:
         "id", "owner_uid", "filename", "original_filename",
         "mime_type", "size_bytes", "status", "storage_path",
         "error_message", "created_at", "updated_at",
+        "processing_warning", "indexed_at", "processing_started_at", "chunk_count",
     }
 
 

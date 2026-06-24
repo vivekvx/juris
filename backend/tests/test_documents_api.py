@@ -41,6 +41,16 @@ def _make_doc(**overrides: object) -> Document:
     return Document(**base)  # type: ignore[arg-type]
 
 
+@pytest.fixture(autouse=True)
+def _mock_firebase_calls() -> Generator[None, None, None]:
+    # mark_processing (request handler) and process_document (BackgroundTask)
+    # both call Firestore. Mock both so tests need no Firebase credentials.
+    with patch("app.api.documents.process_document"), \
+         patch("app.api.documents.mark_processing") as mock_mark:
+        mock_mark.return_value = _make_doc(status=DocumentStatus.PROCESSING)
+        yield
+
+
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
     app = create_app()
@@ -157,7 +167,7 @@ def test_upload_response_status_is_ready(client: TestClient) -> None:
             "/api/documents/",
             files={"file": ("contract.pdf", PDF_BYTES, "application/pdf")},
         )
-    assert response.json()["status"] == "READY"
+    assert response.json()["status"] == "PROCESSING"
 
 
 def test_upload_response_timestamps_end_in_z(client: TestClient) -> None:
@@ -195,20 +205,21 @@ def test_upload_response_error_message_none_on_success(client: TestClient) -> No
 # ---------------------------------------------------------------------------
 
 def test_transitions_uploading_processing_ready(client: TestClient) -> None:
+    # Route calls mark_processing (UPLOADING→PROCESSING); background job handles READY.
     with (
         patch("app.api.documents.create_document") as mc,
         patch("app.api.documents.upload_file") as mu,
         patch("app.api.documents.update_document_status") as mupd,
+        patch("app.api.documents.mark_processing") as mock_mark,
     ):
+        mock_mark.return_value = _make_doc(status=DocumentStatus.PROCESSING)
         _patch_services(mc, mu, mupd)
         client.post(
             "/api/documents/",
             files={"file": ("contract.pdf", PDF_BYTES, "application/pdf")},
         )
-    calls = mupd.call_args_list
-    assert len(calls) == 2
-    assert calls[0].args[1] == DocumentStatus.PROCESSING
-    assert calls[1].args[1] == DocumentStatus.READY
+    mock_mark.assert_called_once()
+    assert mock_mark.call_args.args[1] == _USER.uid
 
 
 def test_create_document_called_with_uploading_status(client: TestClient) -> None:
