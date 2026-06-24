@@ -7,7 +7,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
 from app.core.auth import get_current_user
@@ -18,8 +18,10 @@ from app.services.documents import (
     delete_document,
     get_document,
     list_documents,
+    mark_processing,
     update_document_status,
 )
+from app.services.processing import process_document
 from app.services.storage import delete_file, generate_storage_path, upload_file
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
@@ -40,6 +42,9 @@ class DocumentResponse(BaseModel):
     size_bytes: int
     status: DocumentStatus
     error_message: str | None
+    indexed_at: str | None
+    chunk_count: int | None
+    processing_warning: str | None
     created_at: str
     updated_at: str
 
@@ -62,6 +67,9 @@ def _to_response(doc: Document) -> DocumentResponse:
         size_bytes=data["size_bytes"],
         status=doc.status,
         error_message=data["error_message"],
+        indexed_at=data["indexed_at"],
+        chunk_count=data["chunk_count"],
+        processing_warning=data["processing_warning"],
         created_at=data["created_at"],
         updated_at=data["updated_at"],
     )
@@ -74,6 +82,7 @@ def _to_response(doc: Document) -> DocumentResponse:
 )
 async def upload_document(
     file: UploadFile,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
 ) -> DocumentResponse:
     mime_type = file.content_type or ""
@@ -131,8 +140,8 @@ async def upload_document(
             detail="Failed to store the document. Please try again.",
         )
 
-    doc = update_document_status(doc.id, DocumentStatus.PROCESSING, current_user.uid)
-    doc = update_document_status(doc.id, DocumentStatus.READY, current_user.uid)
+    doc = mark_processing(doc.id, current_user.uid)
+    background_tasks.add_task(process_document, doc.id, current_user.uid)
     return _to_response(doc)
 
 

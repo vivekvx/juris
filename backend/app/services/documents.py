@@ -24,6 +24,7 @@ _ALLOWED_TRANSITIONS: frozenset[tuple[DocumentStatus, DocumentStatus]] = frozens
     (DocumentStatus.PROCESSING, DocumentStatus.READY),
     (DocumentStatus.PROCESSING, DocumentStatus.FAILED),
 })
+# READY → PROCESSING intentionally absent — reprocess route deferred to M4.
 
 
 def _utc_now() -> datetime:
@@ -100,6 +101,105 @@ def update_document_status(
         copy_fields["error_message"] = error_message
     ref.update(updates)
     return doc.model_copy(update=copy_fields)
+
+
+def mark_processing(document_id: str, owner_uid: str) -> Document:
+    """Transition UPLOADING → PROCESSING and record processing_started_at in one write."""
+    ref = get_firestore_client().collection(_COLLECTION).document(document_id)
+    snap = cast(DocumentSnapshot, ref.get())
+    if not snap.exists:
+        raise HTTPException(status_code=404, detail="Document not found.")
+    doc = _snap_to_doc(snap)
+    if doc.owner_uid != owner_uid:
+        raise HTTPException(status_code=403, detail="Access denied.")
+    if (doc.status, DocumentStatus.PROCESSING) not in _ALLOWED_TRANSITIONS:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Transition {doc.status} → PROCESSING is not allowed.",
+        )
+    now = _utc_now()
+    updates: dict[str, Any] = {
+        "status": DocumentStatus.PROCESSING.value,
+        "processing_started_at": now,
+        "updated_at": now,
+    }
+    ref.update(updates)
+    return doc.model_copy(update={
+        "status": DocumentStatus.PROCESSING,
+        "processing_started_at": now,
+        "updated_at": now,
+    })
+
+
+def update_indexed(
+    doc_id: str,
+    owner_uid: str,
+    chunk_count: int,
+    processing_warning: str | None = None,
+) -> Document:
+    """Transition PROCESSING → READY and write indexing metadata."""
+    ref = get_firestore_client().collection(_COLLECTION).document(doc_id)
+    snap = cast(DocumentSnapshot, ref.get())
+    if not snap.exists:
+        raise HTTPException(status_code=404, detail="Document not found.")
+    doc = _snap_to_doc(snap)
+    if doc.owner_uid != owner_uid:
+        raise HTTPException(status_code=403, detail="Access denied.")
+    if (doc.status, DocumentStatus.READY) not in _ALLOWED_TRANSITIONS:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Transition {doc.status} → READY is not allowed.",
+        )
+    now = _utc_now()
+    updates: dict[str, Any] = {
+        "status": DocumentStatus.READY.value,
+        "indexed_at": now,
+        "chunk_count": chunk_count,
+        "updated_at": now,
+    }
+    copy_fields: dict[str, Any] = {
+        "status": DocumentStatus.READY,
+        "indexed_at": now,
+        "chunk_count": chunk_count,
+        "updated_at": now,
+    }
+    if processing_warning is not None:
+        updates["processing_warning"] = processing_warning
+        copy_fields["processing_warning"] = processing_warning
+    ref.update(updates)
+    return doc.model_copy(update=copy_fields)
+
+
+def recover_stuck_documents(timeout_minutes: int = 10) -> int:
+    """Detect documents stuck in PROCESSING for >timeout_minutes and fail them.
+
+    Called at FastAPI startup. Returns the number of documents recovered.
+    """
+    from datetime import timedelta
+
+    db = get_firestore_client()
+    cutoff = _utc_now() - timedelta(minutes=timeout_minutes)
+    snaps = (
+        db.collection(_COLLECTION)
+        .where("status", "==", DocumentStatus.PROCESSING.value)
+        .where("processing_started_at", "<", cutoff)
+        .stream()
+    )
+    count = 0
+    for snap in snaps:
+        data = snap.to_dict()
+        if data is None:
+            continue
+        try:
+            snap.reference.update({
+                "status": DocumentStatus.FAILED.value,
+                "error_message": "Processing timed out",
+                "updated_at": _utc_now(),
+            })
+            count += 1
+        except Exception:
+            pass
+    return count
 
 
 def delete_document(document_id: str, owner_uid: str) -> None:

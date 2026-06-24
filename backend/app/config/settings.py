@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     port: int = 8080
     log_level: str = "info"
 
+    # M3: document processing
+    chunk_size_tokens:        int   = 512
+    chunk_overlap_tokens:     int   = 50
+    max_chunks_per_document:  int   = 1000
+    retrieval_top_k:          int   = 5
+    citation_score_threshold: float = 0.3
+
     # Optional observability (no-op until set)
     langfuse_secret_key: str = ""
     langfuse_public_key: str = ""

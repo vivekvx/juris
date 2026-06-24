@@ -24,13 +24,19 @@ class Document(BaseModel):
     size_bytes:        int
     status:            DocumentStatus
     storage_path:      str
-    error_message:     str | None = None
-    created_at:        datetime
-    updated_at:        datetime
+    error_message:         str | None = None
+    indexed_at:            datetime | None = None
+    chunk_count:           int | None = None
+    processing_warning:    str | None = None
+    processing_started_at: datetime | None = None
+    created_at:            datetime
+    updated_at:            datetime
 
-    @field_validator("created_at", "updated_at")
+    @field_validator("created_at", "updated_at", "indexed_at", "processing_started_at")
     @classmethod
-    def must_be_utc(cls, v: datetime) -> datetime:
+    def must_be_utc(cls, v: datetime | None) -> datetime | None:
+        if v is None:
+            return v
         if v.tzinfo is None:
             raise ValueError("timestamp must be timezone-aware")
         offset = v.utcoffset()
@@ -38,6 +44,8 @@ class Document(BaseModel):
             raise ValueError("timestamp must be UTC (zero offset)")
         return v
 
-    @field_serializer("created_at", "updated_at")
-    def serialize_dt(self, v: datetime) -> str:
+    @field_serializer("created_at", "updated_at", "indexed_at", "processing_started_at")
+    def serialize_dt(self, v: datetime | None) -> str | None:
+        if v is None:
+            return None
         return v.isoformat().replace("+00:00", "Z")

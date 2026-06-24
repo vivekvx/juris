@@ -7,6 +7,9 @@ Create a fresh app in tests:
     from app.main import create_app
     client = TestClient(create_app())
 """
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,6 +21,19 @@ from app.config.settings import Settings, get_settings
 from app.utils.logging import configure_logging, get_logger
 
 _log = get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Recover documents stuck in PROCESSING from a previous crashed instance."""
+    try:
+        from app.services.documents import recover_stuck_documents
+        recovered = recover_stuck_documents(timeout_minutes=10)
+        if recovered:
+            _log.warning("Recovered %d stuck documents at startup", recovered)
+    except Exception as exc:
+        _log.error("Stuck document recovery failed: %s", exc)
+    yield
 
 
 def register_middleware(app: FastAPI, settings: Settings) -> None:
@@ -50,6 +66,7 @@ def create_app() -> FastAPI:
         version="0.1.0",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,
     )
     register_middleware(app, settings)
     register_routes(app)
