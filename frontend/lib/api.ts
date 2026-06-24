@@ -1,5 +1,6 @@
 import type { DocumentResponse } from "@/types/document";
 import type { ConversationResponse, MessageResponse } from "@/types/conversation";
+import type { TranscribeResponse } from "@/types/voice";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8001";
 
@@ -46,22 +47,6 @@ export async function listMessages(
   return res.json() as Promise<MessageResponse[]>;
 }
 
-export async function sendMessage(
-  conversationId: string,
-  content: string,
-  idToken: string,
-): Promise<MessageResponse> {
-  const res = await fetch(`${BACKEND_URL}/api/conversations/${conversationId}/messages/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${idToken}`,
-    },
-    body: JSON.stringify({ content }),
-  });
-  if (!res.ok) throw new Error("Failed to send message.");
-  return res.json() as Promise<MessageResponse>;
-}
 
 export async function listDocuments(idToken: string): Promise<DocumentResponse[]> {
   const res = await fetch(`${BACKEND_URL}/api/documents/`, {
@@ -92,6 +77,31 @@ export async function backendPost(
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
+}
+
+export async function transcribeAudio(
+  blob: Blob,
+  idToken: string,
+  language?: string,
+): Promise<TranscribeResponse> {
+  const formData = new FormData();
+  formData.append("file", blob, "audio.webm");
+  if (language) formData.append("language", language);
+
+  const res = await fetch(`${BACKEND_URL}/api/voice/transcribe`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${idToken}` },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { detail?: unknown };
+    const detail =
+      typeof body.detail === "string" ? body.detail : "Transcription failed. Please try again.";
+    throw new Error(detail);
+  }
+
+  return res.json() as Promise<TranscribeResponse>;
 }
 
 export async function uploadDocument(

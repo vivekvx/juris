@@ -1,8 +1,9 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { PaperPlaneRight } from "@phosphor-icons/react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { MicButton } from "./mic-button";
 
 export function InputBar({
   onSend,
@@ -29,6 +30,11 @@ export function InputBar({
     }
   }
 
+  const handleTranscript = useCallback((text: string) => {
+    setValue(text);
+    ref.current?.focus();
+  }, []);
+
   return (
     <div className="border-t border-border bg-background px-4 py-3">
       <div className="flex gap-2 items-end max-w-[720px] mx-auto">
@@ -42,6 +48,7 @@ export function InputBar({
           rows={1}
           disabled={disabled}
         />
+        <MicButton onTranscript={handleTranscript} disabled={disabled} />
         <Button
           size="icon"
           onClick={handleSubmit}
