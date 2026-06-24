@@ -13,10 +13,12 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.chat import router as chat_router
 from app.api.conversations import router as conversations_router
 from app.api.documents import router as documents_router
 from app.api.health import router as health_router
 from app.api.users import router as users_router
+from app.api.voice import router as voice_router
 from app.config.settings import Settings, get_settings
 from app.utils.logging import configure_logging, get_logger
 
@@ -41,7 +43,7 @@ def register_middleware(app: FastAPI, settings: Settings) -> None:
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "DELETE"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["Content-Type", "Authorization"],
     )
 
@@ -51,6 +53,8 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(users_router)
     app.include_router(documents_router)
     app.include_router(conversations_router)
+    app.include_router(chat_router)
+    app.include_router(voice_router)
 
 
 def create_app() -> FastAPI:

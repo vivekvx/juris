@@ -12,6 +12,7 @@ dependencies = [
     "markitdown[all]>=0.1.6",
     "numpy>=2.1",
     "python-multipart>=0.0.18",
+    "google-cloud-speech>=2.29",
 ]
 
 [project.optional-dependencies]

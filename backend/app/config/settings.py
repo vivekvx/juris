@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     retrieval_top_k:          int   = 5
     citation_score_threshold: float = 0.3
 
+    # M5: voice
+    stt_provider: str = "google_cloud"
+    stt_model: str = "latest_long"
+    voice_max_audio_seconds: int = 120
+    voice_max_audio_bytes: int = 10 * 1024 * 1024
+
     # Optional observability (no-op until set)
     langfuse_secret_key: str = ""
     langfuse_public_key: str = ""
