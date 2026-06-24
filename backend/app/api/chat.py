@@ -25,6 +25,7 @@ from app.services.conversations import (
     list_messages,
     patch_conversation,
 )
+from app.services.embedding import embed_query
 from app.services.llm import generate_title, stream_response
 from app.services.rag import build_context, retrieve
 
@@ -63,14 +64,22 @@ async def _stream(
 ) -> AsyncGenerator[str, None]:
     history = await asyncio.to_thread(list_messages, conv.id, uid, 10, True)
 
+    # Embed FIRST — failure means no user message is written (spec §10)
+    try:
+        query_vec = await embed_query(content)
+    except Exception as exc:
+        _log.error("Embed failed for conv %s: %s", conv.id, exc)
+        yield _sse("error", {"detail": "Failed to process your message. Please try again."})
+        return
+
+    # Write user message only after embed succeeds
     await asyncio.to_thread(create_message, conv.id, uid, content)
 
-    # request_doc_ids=None means use the conversation's scoping (which may also be None = all docs)
     doc_ids = request_doc_ids if request_doc_ids is not None else conv.document_ids
 
     citations: list[ChunkCitation] = []
     try:
-        citations = await retrieve(uid, content, doc_ids)
+        citations = await retrieve(uid, query_vec, doc_ids)
     except Exception as exc:
         _log.warning("Retrieval failed for conv %s: %s", conv.id, exc)
 

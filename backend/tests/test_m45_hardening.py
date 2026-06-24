@@ -113,3 +113,41 @@ def test_send_message_returns_404_before_streaming_for_wrong_owner() -> None:
         )
         assert resp.status_code == 404
         assert "text/event-stream" not in resp.headers.get("content-type", "")
+
+
+# ---------------------------------------------------------------------------
+# Fix 3: Embed failure hard-fails; retrieve takes pre-embedded vector
+# ---------------------------------------------------------------------------
+
+def test_retrieve_signature_accepts_query_vec() -> None:
+    """rag.retrieve must accept query_vec (list[float]), not a query string."""
+    import inspect
+    from app.services.rag import retrieve
+    sig = inspect.signature(retrieve)
+    params = list(sig.parameters.keys())
+    assert "query_vec" in params, f"Expected query_vec param, got: {params}"
+    assert "query" not in params, f"Old 'query' string param still present: {params}"
+
+
+@pytest.mark.asyncio
+async def test_embed_failure_yields_error_no_user_message_written() -> None:
+    """If embed_query raises, no user message is written and SSE error is yielded."""
+    from app.api.chat import _stream
+    from app.models.conversation import Conversation
+
+    conv = Conversation(
+        id="conv_001", owner_uid="uid_abc", title="T",
+        created_at=_T0, updated_at=_T0,
+    )
+
+    with patch("app.api.chat.embed_query", side_effect=RuntimeError("quota exceeded")), \
+         patch("app.api.chat.create_message") as mock_create_msg, \
+         patch("app.api.chat.list_messages", return_value=[]):
+
+        events = []
+        async for chunk in _stream(conv, "test query", None, "uid_abc"):
+            events.append(chunk)
+
+        mock_create_msg.assert_not_called()
+        assert any("event: error" in e for e in events)
+        assert not any("event: token" in e for e in events)
