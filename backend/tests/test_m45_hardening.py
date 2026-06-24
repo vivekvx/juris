@@ -215,3 +215,14 @@ async def test_llm_error_with_content_writes_partial_message() -> None:
         call_content = mock_create_asst.call_args[0][2]
         assert "[Response interrupted]" in call_content
         assert any("event: error" in e for e in events)
+
+
+# ---------------------------------------------------------------------------
+# Fix 5: Title task held by module-level set prevents GC
+# ---------------------------------------------------------------------------
+
+def test_background_tasks_set_exists_in_chat_module() -> None:
+    """chat module must expose _background_tasks set for GC-safe task tracking."""
+    from app.api import chat as chat_module
+    assert hasattr(chat_module, "_background_tasks"), "_background_tasks set missing from chat.py"
+    assert isinstance(chat_module._background_tasks, set)

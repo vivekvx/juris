@@ -29,6 +29,9 @@ from app.services.embedding import embed_query
 from app.services.llm import generate_title, stream_response
 from app.services.rag import build_context, retrieve
 
+# Strong references prevent GC of fire-and-forget title tasks.
+_background_tasks: set[asyncio.Task[None]] = set()
+
 router = APIRouter(prefix="/api/conversations", tags=["chat"])
 _log = logging.getLogger(__name__)
 
@@ -109,7 +112,11 @@ async def _stream(
     yield _sse("done", {"message_id": asst_msg.id})
 
     if not conv.title_generated:
-        asyncio.create_task(_save_title(conv.id, uid, content, accumulated))
+        task: asyncio.Task[None] = asyncio.create_task(
+            _save_title(conv.id, uid, content, accumulated)
+        )
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
 
 
 @router.post("/{conv_id}/messages")
