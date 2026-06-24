@@ -151,3 +151,67 @@ async def test_embed_failure_yields_error_no_user_message_written() -> None:
         mock_create_msg.assert_not_called()
         assert any("event: error" in e for e in events)
         assert not any("event: token" in e for e in events)
+
+
+# ---------------------------------------------------------------------------
+# Fix 4: Disconnect — CancelledError does not write orphan assistant message
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_cancelled_error_does_not_write_assistant_message() -> None:
+    """CancelledError (client disconnect) must not persist a partial assistant message."""
+    import asyncio
+    from app.api.chat import _stream
+    from app.models.conversation import Conversation
+
+    conv = Conversation(
+        id="conv_001", owner_uid="uid_abc", title="T",
+        created_at=_T0, updated_at=_T0,
+    )
+
+    async def _cancelling_stream(*args, **kwargs):
+        yield "partial token"
+        raise asyncio.CancelledError("client gone")
+
+    with patch("app.api.chat.embed_query", return_value=[0.1] * 768), \
+         patch("app.api.chat.create_message"), \
+         patch("app.api.chat.retrieve", return_value=[]), \
+         patch("app.api.chat.stream_response", side_effect=_cancelling_stream), \
+         patch("app.api.chat.create_assistant_message") as mock_create_asst, \
+         patch("app.api.chat.list_messages", return_value=[]):
+
+        with pytest.raises(asyncio.CancelledError):
+            async for _ in _stream(conv, "test", None, "uid_abc"):
+                pass
+
+        mock_create_asst.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_llm_error_with_content_writes_partial_message() -> None:
+    """Non-disconnect LLM error with accumulated content must persist partial message."""
+    from app.api.chat import _stream
+    from app.models.conversation import Conversation
+
+    conv = Conversation(
+        id="conv_001", owner_uid="uid_abc", title="T",
+        created_at=_T0, updated_at=_T0,
+    )
+
+    async def _failing_stream(*args, **kwargs):
+        yield "some text"
+        raise RuntimeError("quota exceeded")
+
+    with patch("app.api.chat.embed_query", return_value=[0.1] * 768), \
+         patch("app.api.chat.create_message"), \
+         patch("app.api.chat.retrieve", return_value=[]), \
+         patch("app.api.chat.stream_response", side_effect=_failing_stream), \
+         patch("app.api.chat.create_assistant_message") as mock_create_asst, \
+         patch("app.api.chat.list_messages", return_value=[]):
+
+        events = [e async for e in _stream(conv, "test", None, "uid_abc")]
+
+        mock_create_asst.assert_called_once()
+        call_content = mock_create_asst.call_args[0][2]
+        assert "[Response interrupted]" in call_content
+        assert any("event: error" in e for e in events)

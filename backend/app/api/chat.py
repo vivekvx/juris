@@ -91,6 +91,9 @@ async def _stream(
         async for token in stream_response(history, context, content):
             accumulated += token
             yield _sse("token", {"text": token})
+    except (asyncio.CancelledError, GeneratorExit):
+        # Client disconnected — do not write orphan message
+        raise
     except Exception as exc:
         _log.error("LLM stream error for conv %s: %s", conv.id, exc)
         final = accumulated + ("\n\n[Response interrupted]" if accumulated else "[Response failed]")
