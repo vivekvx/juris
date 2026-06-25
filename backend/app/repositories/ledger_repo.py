@@ -146,6 +146,33 @@ async def get_entry(org_id: str, decision_id: str) -> LedgerEntry | None:
     return _dict_to_entry(data)
 
 
+async def get_latest_entry(org_id: str) -> LedgerEntry | None:
+    """Entry with the highest sequence_no for org_id. None if ledger is empty."""
+    db = get_firestore_client()
+
+    def _query() -> LedgerEntry | None:
+        snaps = list(
+            db.collection(_ORGS)
+            .document(org_id)
+            .collection(_LEDGER)
+            .order_by("sequence_no", direction=Query.DESCENDING)
+            .limit(1)
+            .stream()
+        )
+        if not snaps:
+            return None
+        data = snaps[0].to_dict()
+        if data is None:
+            return None
+        try:
+            return _dict_to_entry(data)
+        except Exception:
+            _log.warning("Malformed latest ledger entry for org %s", org_id)
+            return None
+
+    return await asyncio.to_thread(_query)
+
+
 async def get_timeline(org_id: str, conversation_id: str) -> list[LedgerEntry]:
     """All ledger entries for a conversation, ordered by sequence_no ascending."""
     db = get_firestore_client()

@@ -12,7 +12,13 @@ from app.models.conversation import Message
 
 _log = logging.getLogger(__name__)
 
-_MODEL = "gemini-2.5-flash"
+# Exported so the ledger service can stamp each entry with the exact model params.
+LLM_MODEL_NAME = "gemini-2.5-flash"
+LLM_TEMPERATURE: float = 0.3
+LLM_MAX_OUTPUT_TOKENS: int = 2048
+PROMPT_TEMPLATE_VERSION = "m6.1"
+
+_MODEL = LLM_MODEL_NAME
 
 SYSTEM_PROMPT = """You are Juris, an AI legal assistant. You help users understand \
 legal documents and answer questions about their legal matters.

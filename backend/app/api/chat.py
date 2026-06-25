@@ -26,6 +26,7 @@ from app.services.conversations import (
     patch_conversation,
 )
 from app.services.embedding import embed_query
+from app.services.ledger import log_decision
 from app.services.llm import generate_title, stream_response
 from app.services.rag import build_context, retrieve
 
@@ -109,6 +110,23 @@ async def _stream(
     )
 
     yield _sse("citations", {"citations": citation_dicts, "sources_used": bool(citations)})
+
+    # Append ledger entry before done — degrade gracefully on failure.
+    try:
+        await log_decision(
+            org_id=uid,  # personal org (uid == org_id) until M6.2 adds Organization
+            conv_id=conv.id,
+            actor_uid=uid,
+            message_id=asst_msg.id,
+            query=content,
+            document_ids=doc_ids or [],
+            citations=citations,
+            accumulated_answer=accumulated,
+            sources_used=bool(citations),
+        )
+    except Exception as exc:
+        _log.error("Ledger write failed for conv %s: %s", conv.id, exc)
+
     yield _sse("done", {"message_id": asst_msg.id})
 
     if not conv.title_generated:
