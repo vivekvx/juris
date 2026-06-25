@@ -79,6 +79,35 @@ export async function backendPost(
   });
 }
 
+export async function synthesizeAudio(
+  text: string,
+  idToken: string,
+  voice?: string,
+  language?: string,
+): Promise<Blob> {
+  const body: Record<string, string> = { text };
+  if (voice) body.voice = voice;
+  if (language) body.language = language;
+
+  const res = await fetch(`${BACKEND_URL}/api/voice/synthesize`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { detail?: unknown };
+    const detail =
+      typeof err.detail === "string" ? err.detail : "Audio generation failed.";
+    throw new Error(detail);
+  }
+
+  return res.blob();
+}
+
 export async function transcribeAudio(
   blob: Blob,
   idToken: string,

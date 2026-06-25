@@ -1,5 +1,6 @@
 import type { MessageResponse } from "@/types/conversation";
 import { CitationCard } from "@/components/conversation/citation-card";
+import { PlayButton } from "@/components/conversation/play-button";
 
 function formatTime(iso: string): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -50,14 +51,19 @@ export function MessageBubble({
           </p>
         )}
 
-        <p
-          className={`text-[0.7rem] text-muted-foreground/60 mt-1 ${
-            isUser ? "text-right pr-1" : "text-left pl-1"
+        <div
+          className={`flex items-center gap-1.5 mt-1 ${
+            isUser ? "justify-end pr-1" : "justify-start pl-0.5"
           }`}
         >
-          {!isUser && <span className="font-medium text-muted-foreground/80">Juris · </span>}
-          {formatTime(message.created_at)}
-        </p>
+          {!isUser && !streaming && (
+            <PlayButton messageId={message.id} text={message.content} />
+          )}
+          <p className="text-[0.7rem] text-muted-foreground/60">
+            {!isUser && <span className="font-medium text-muted-foreground/80">Juris · </span>}
+            {formatTime(message.created_at)}
+          </p>
+        </div>
       </div>
     </div>
   );
