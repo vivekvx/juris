@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { Files } from "@phosphor-icons/react";
+import { Files, Scroll } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,9 +28,20 @@ function MessageSkeletons() {
 
 export function ConversationView({ conversationId }: { conversationId: string }) {
   const { state, sending, send, streamingMessage, autoPlayTarget, clearAutoPlay } = useConversation(conversationId);
-  const { contextPanelOpen, toggleContextPanel } = useConversationStore();
+  const {
+    contextPanelOpen,
+    toggleContextPanel,
+    timelinePanelOpen,
+    toggleTimelinePanel,
+    setCurrentConversationId,
+  } = useConversationStore();
   useAutoPlay(autoPlayTarget, clearAutoPlay);
   const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setCurrentConversationId(conversationId);
+    return () => { setCurrentConversationId(null); };
+  }, [conversationId, setCurrentConversationId]);
 
   const messageCount = state.status === "ready" ? state.messages.length : 0;
   const hasStreaming = streamingMessage !== null;
@@ -54,14 +65,28 @@ export function ConversationView({ conversationId }: { conversationId: string })
         <Button
           variant="ghost"
           size="icon"
+          onClick={toggleTimelinePanel}
+          className={cn(
+            "hidden lg:flex flex-shrink-0 h-7 w-7 text-muted-foreground hover:text-foreground",
+            timelinePanelOpen && "bg-secondary text-foreground",
+          )}
+          aria-label="Toggle decision log"
+          aria-pressed={timelinePanelOpen}
+        >
+          <Scroll size={15} aria-hidden />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={toggleContextPanel}
           className={cn(
             "flex-shrink-0 h-7 w-7 text-muted-foreground hover:text-foreground",
             contextPanelOpen && "bg-secondary text-foreground"
           )}
           aria-label="Toggle documents panel"
+          aria-pressed={contextPanelOpen}
         >
-          <Files size={15} />
+          <Files size={15} aria-hidden />
         </Button>
       </div>
 

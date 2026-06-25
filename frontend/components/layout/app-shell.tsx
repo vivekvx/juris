@@ -3,6 +3,7 @@ import { SidebarMobile } from "@/components/layout/sidebar-mobile";
 import { ConversationPanel } from "@/components/layout/conversation-panel";
 import { ContextPanelDesktop } from "@/components/layout/context-panel";
 import { ContextPanelMobile } from "@/components/layout/context-panel-mobile";
+import { DecisionTimelinePanelDesktop } from "@/components/layout/decision-timeline-panel";
 
 export function AppShell({ children }: { children?: React.ReactNode }) {
   return (
@@ -15,6 +16,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         <ConversationPanel>{children}</ConversationPanel>
         <div className="hidden lg:flex">
           <ContextPanelDesktop />
+        </div>
+        <div className="hidden lg:flex">
+          <DecisionTimelinePanelDesktop />
         </div>
         <ContextPanelMobile />
       </main>

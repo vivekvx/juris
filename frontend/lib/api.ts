@@ -1,6 +1,7 @@
 import type { DocumentResponse } from "@/types/document";
 import type { ConversationResponse, MessageResponse } from "@/types/conversation";
 import type { TranscribeResponse } from "@/types/voice";
+import type { DecisionTimelineResponse, LedgerEntryResponse } from "@/types/ledger";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8001";
 
@@ -154,4 +155,29 @@ export async function uploadDocument(
   }
 
   return res.json() as Promise<DocumentResponse>;
+}
+
+export async function fetchDecisionTimeline(
+  conversationId: string,
+  idToken: string,
+): Promise<DecisionTimelineResponse> {
+  const res = await fetch(
+    `${BACKEND_URL}/api/conversations/${conversationId}/decisions`,
+    { headers: { Authorization: `Bearer ${idToken}` } },
+  );
+  if (!res.ok) throw new Error("Failed to load decision timeline.");
+  return res.json() as Promise<DecisionTimelineResponse>;
+}
+
+export async function fetchDecision(
+  conversationId: string,
+  decisionId: string,
+  idToken: string,
+): Promise<LedgerEntryResponse> {
+  const res = await fetch(
+    `${BACKEND_URL}/api/conversations/${conversationId}/decisions/${decisionId}`,
+    { headers: { Authorization: `Bearer ${idToken}` } },
+  );
+  if (!res.ok) throw new Error("Failed to load decision.");
+  return res.json() as Promise<LedgerEntryResponse>;
 }
