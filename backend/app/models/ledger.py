@@ -6,6 +6,15 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 
+# PolicyEffect, PolicyTrigger, PolicyEvaluation, PolicyRecord are defined in
+# policy.py (canonical home) and re-exported here for backward compatibility.
+from app.models.policy import (  # noqa: F401
+    PolicyEffect,
+    PolicyEvaluation,
+    PolicyRecord,
+    PolicyTrigger,
+)
+
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -16,22 +25,6 @@ class DecisionKind(str, Enum):
     DECISION   = "decision"
     ANNOTATION = "annotation"
     OVERRIDE   = "override"
-
-
-class PolicyEffect(str, Enum):
-    ALLOW            = "allow"
-    WARN             = "warn"
-    REDACT           = "redact"
-    REQUIRE_APPROVAL = "require_approval"
-    DENY             = "deny"
-    REQUIRE_LEDGER   = "require_ledger"
-
-
-class PolicyTrigger(str, Enum):
-    ON_QUERY      = "on-query"
-    ON_RETRIEVAL  = "on-retrieval"
-    ON_GENERATION = "on-generation"
-    ON_RELEASE    = "on-release"
 
 
 class OverrideDisposition(str, Enum):
@@ -100,21 +93,6 @@ class ModelParams(BaseModel):
     temperature:             float
     max_output_tokens:       int
     prompt_template_version: str
-
-
-class PolicyEvaluation(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    trigger:   PolicyTrigger
-    effect:    PolicyEffect
-    policy_id: str
-
-
-class PolicyRecord(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    snapshot_id:  str
-    evaluations:  list[PolicyEvaluation]
 
 
 class GroundingStatus(BaseModel):
