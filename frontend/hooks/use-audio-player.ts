@@ -14,7 +14,7 @@ export type UseAudioPlayerReturn = {
 
 // Module-level cache: messageId → objectURL (session-scoped, survives re-renders)
 export const _audioCache = new Map<string, string>();
-const STOP_EVENT = "juris:audio-stop";
+export const STOP_EVENT = "juris:audio-stop";
 
 export function useAudioPlayer(messageId: string, text: string): UseAudioPlayerReturn {
   const [phase, setPhase] = useState<AudioPhase>("idle");

@@ -186,6 +186,19 @@ describe("useRecorder", () => {
     expect(onTranscript).toHaveBeenCalledWith("Retry success");
   });
 
+  it("dispatches juris:audio-stop when recording starts (stops active playback)", async () => {
+    const stopped: string[] = [];
+    const listener = (e: Event) =>
+      stopped.push((e as CustomEvent<{ except: string }>).detail.except);
+    window.addEventListener("juris:audio-stop", listener);
+
+    const { result } = renderHook(() => useRecorder(vi.fn()));
+    await act(async () => { result.current.start(); });
+
+    expect(stopped.length).toBeGreaterThan(0);
+    window.removeEventListener("juris:audio-stop", listener);
+  });
+
   it("stop() when not recording goes to idle without transcribing", async () => {
     const mockTranscribeAudio = vi.mocked(transcribeAudio);
     const { result } = renderHook(() => useRecorder(vi.fn()));

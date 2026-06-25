@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { InputBar } from "@/components/conversation/input-bar";
 import { MessageBubble } from "@/components/conversation/message-bubble";
 import { useConversation } from "@/hooks/use-conversation";
+import { useAutoPlay } from "@/hooks/use-auto-play";
 import { useConversationStore } from "@/stores/conversation-store";
 
 function MessageSkeletons() {
@@ -26,8 +27,9 @@ function MessageSkeletons() {
 }
 
 export function ConversationView({ conversationId }: { conversationId: string }) {
-  const { state, sending, send, streamingMessage } = useConversation(conversationId);
+  const { state, sending, send, streamingMessage, autoPlayTarget, clearAutoPlay } = useConversation(conversationId);
   const { contextPanelOpen, toggleContextPanel } = useConversationStore();
+  useAutoPlay(autoPlayTarget, clearAutoPlay);
   const endRef = useRef<HTMLDivElement>(null);
 
   const messageCount = state.status === "ready" ? state.messages.length : 0;

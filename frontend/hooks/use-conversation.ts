@@ -42,10 +42,13 @@ async function* parseSSE(
   }
 }
 
+export type AutoPlayTarget = { id: string; content: string };
+
 export function useConversation(id: string) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [sending, setSending] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState<StreamingMessage | null>(null);
+  const [autoPlayTarget, setAutoPlayTarget] = useState<AutoPlayTarget | null>(null);
   const initialMsgRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
@@ -78,6 +81,7 @@ export function useConversation(id: string) {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
 
   const send = useCallback(
@@ -146,6 +150,7 @@ export function useConversation(id: string) {
                 : prev,
             );
             setStreamingMessage(null);
+            setAutoPlayTarget({ id: finalMsg.id, content: accumulated });
           } else if (event === "error") {
             throw new Error((parsed.detail as string) ?? "Stream error");
           }
@@ -175,5 +180,7 @@ export function useConversation(id: string) {
     }
   }, [state.status, send]);
 
-  return { state, sending, send, streamingMessage, refetch: load };
+  const clearAutoPlay = useCallback(() => setAutoPlayTarget(null), []);
+
+  return { state, sending, send, streamingMessage, refetch: load, autoPlayTarget, clearAutoPlay };
 }

@@ -3,6 +3,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { getAuth } from "@/lib/firebase";
 import { transcribeAudio } from "@/lib/api";
+import { STOP_EVENT } from "@/hooks/use-audio-player";
 
 export type RecorderState =
   | { phase: "idle" }
@@ -61,6 +62,8 @@ export function useRecorder(onTranscript: (text: string) => void): UseRecorderRe
 
   const start = useCallback(() => {
     void (async () => {
+      // Stop any active audio playback before recording
+      window.dispatchEvent(new CustomEvent(STOP_EVENT, { detail: { except: "" } }));
       setRecorderState({ phase: "requesting" });
 
       let stream: MediaStream;
