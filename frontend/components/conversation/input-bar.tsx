@@ -43,10 +43,11 @@ export function InputBar({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask a legal question… (Shift+Enter for new line)"
-          className="resize-none min-h-[44px] max-h-[200px]"
+          placeholder="Ask a legal question…"
+          className="resize-none min-h-[44px] max-h-[200px] overflow-y-auto [field-sizing:content]"
           rows={1}
           disabled={disabled}
+          aria-label="Message input"
         />
         <MicButton onTranscript={handleTranscript} disabled={disabled} />
         <Button
