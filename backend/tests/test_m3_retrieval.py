@@ -5,7 +5,6 @@ Tests the full M3 pipeline up to (but not including) external API calls:
 """
 from datetime import datetime, timezone
 
-import pytest
 
 from app.models.chunk import Chunk, CURRENT_CHUNK_VERSION, EMBEDDING_MODEL
 from app.repositories.chunk_repo import cosine_top_k, build_citation
