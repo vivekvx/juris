@@ -90,6 +90,7 @@ async def log_decision(
     citations: list[ChunkCitation],
     accumulated_answer: str,
     sources_used: bool,
+    policy_record: PolicyRecord | None = None,
 ) -> None:
     """Build and append one DecisionEvent for a completed AI response.
 
@@ -125,7 +126,7 @@ async def log_decision(
             max_output_tokens=LLM_MAX_OUTPUT_TOKENS,
             prompt_template_version=PROMPT_TEMPLATE_VERSION,
         ),
-        policy=_default_policy(),
+        policy=policy_record if policy_record is not None else _default_policy(),
         output=OutputRecord(
             answer_hash=_sha256_hex(accumulated_answer),
             answer_ref=message_id,

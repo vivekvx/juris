@@ -8,12 +8,10 @@ from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 
 # PolicyEffect, PolicyTrigger, PolicyEvaluation, PolicyRecord are defined in
 # policy.py (canonical home) and re-exported here for backward compatibility.
-from app.models.policy import (  # noqa: F401
-    PolicyEffect,
-    PolicyEvaluation,
-    PolicyRecord,
-    PolicyTrigger,
-)
+from app.models.policy import PolicyEffect as PolicyEffect
+from app.models.policy import PolicyEvaluation as PolicyEvaluation
+from app.models.policy import PolicyRecord as PolicyRecord
+from app.models.policy import PolicyTrigger as PolicyTrigger
 
 
 # ---------------------------------------------------------------------------
